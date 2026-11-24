@@ -93,6 +93,9 @@ export const DndSortList: FC<DndSortListProps> = ({ items, onListChange }) => {
     const draggedIndex = getItemIndex(source.id);
     const dimmensions = getElementDimensions(source);
 
+    // Firefox does not start a drag unless some data is set.
+    e.dataTransfer.setData('text/plain', '');
+
     setDraggedItemPos(draggedIndex);
     setDraggedItemDim(dimmensions);
 

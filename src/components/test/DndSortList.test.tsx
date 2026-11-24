@@ -22,8 +22,10 @@ const transforms = () => getRows().map((row) => contentOf(row).style.transform);
 /** Reads the visible label of every row, in DOM order. */
 const renderedLabels = () => getRows().map((row) => contentOf(row).textContent);
 
-const startDrag = (index: number) => {
-  fireEvent.dragStart(getRows()[index]);
+/** jsdom does not implement DataTransfer, so drag starts get a minimal stub. */
+const startDrag = (index: number, dataTransfer = { setData: vi.fn() }) => {
+  fireEvent.dragStart(getRows()[index], { dataTransfer });
+  return dataTransfer;
 };
 
 const enter = (index: number) => {
@@ -114,6 +116,15 @@ describe('DndSortList', () => {
 
       getRows().forEach((row) => expect(dropperOf(row).className).toMatch(/dropperShow/));
       expect(idleClassName).not.toMatch(/dropperShow/);
+    });
+
+    it('sets drag data so the drag starts in every browser', () => {
+      renderList();
+
+      const dataTransfer = startDrag(1);
+
+      expect(dataTransfer.setData).toHaveBeenCalledTimes(1);
+      expect(dataTransfer.setData).toHaveBeenCalledWith('text/plain', '');
     });
 
     it('fades out the dragged item on the next tick', () => {
