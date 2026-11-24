@@ -1,0 +1,9 @@
+.itemContent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 4rem;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+  background-color: #333;
+}
