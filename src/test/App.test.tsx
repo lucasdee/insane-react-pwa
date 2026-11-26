@@ -81,6 +81,27 @@ describe('App', () => {
     expect(location()).toHaveTextContent('/profile');
   });
 
+  it('logs in, opens the memos, creates one and sees it in the list', async () => {
+    const { user } = renderWithProviders(<App />, { route: '/login' });
+
+    await user.type(await screen.findByLabelText('Username'), 'alice');
+    await user.type(screen.getByLabelText('Password'), TEST_PASSWORD);
+    await user.click(screen.getByRole('button', { name: 'Log in' }));
+    await user.click(await screen.findByRole('link', { name: 'Memos' }));
+    expect(await screen.findByText('No memos yet')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('link', { name: 'New memo' }));
+    await user.type(await screen.findByLabelText('Title'), 'First memo');
+    await user.type(screen.getByLabelText('Content'), 'Hello there');
+    await user.type(screen.getByRole('combobox', { name: 'Tags' }), 'greeting{Enter}');
+    await user.click(screen.getByRole('button', { name: 'Create memo' }));
+
+    const card = await screen.findByRole('article', { name: 'First memo' });
+    expect(card).toHaveTextContent('Your role: ADMIN');
+    expect(card).toHaveTextContent('greeting');
+    expect(location()).toHaveTextContent(/^\/memos$/);
+  });
+
   it('sends unknown paths to the home screen', async () => {
     renderWithProviders(<App />, { route: '/no/such/page' });
 

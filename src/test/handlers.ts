@@ -1,6 +1,18 @@
 import { http, HttpResponse } from 'msw';
 import { API_URL } from '../config';
-import type { AuthResponse, LoginRequest, RegisterRequest, User, UserSummary } from '../api/types';
+import type {
+  AuthResponse,
+  LoginRequest,
+  Memo,
+  MemoCreateRequest,
+  MemoOnUser,
+  MemoOnUserCreateRequest,
+  MemoTagsUpdateRequest,
+  RegisterRequest,
+  Role,
+  User,
+  UserSummary,
+} from '../api/types';
 
 /** The full URL of an API path, for `http.get(api('/users/me'), ...)`. */
 export const api = (path: string) => `${API_URL}${path}`;
@@ -32,6 +44,9 @@ export const authResponse = (minutes = 5): AuthResponse => ({
   refreshTokenExpiresOn: Date.now() + 7 * 24 * 60 * MINUTE,
 });
 
+/** A memo in the fake API: the signed-in user's role on it, and who else it is assigned to. */
+export type MockMemo = { memo: Memo; role: Role; assignees: { userUuid: string; role: Role }[] };
+
 /**
  * State of the fake API. `session` stands for a valid refresh-token cookie: while it
  * is set, /auth/refresh succeeds. Tests change it directly, e.g. to start signed in.
@@ -42,13 +57,46 @@ export const mockApi = {
   password: TEST_PASSWORD,
   /** Access tokens the fake API accepts. */
   validTokens: new Set<string>(),
+  /** The signed-in user's memos. */
+  memos: [] as MockMemo[],
 };
+
+let memoCount = 0;
+
+/** Adds a memo to the signed-in user's list. */
+export const seedMemo = (
+  overrides: Partial<Pick<Memo, 'title' | 'content' | 'tags' | 'createdAt'>> & { role?: Role } = {},
+): MockMemo => {
+  const n = ++memoCount;
+  const { role = 'ADMIN', ...memo } = overrides;
+  const entry: MockMemo = {
+    memo: {
+      uuid: `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`,
+      title: `Memo ${n}`,
+      content: `Content of memo ${n}`,
+      authorUuid: testUser.uuid,
+      createdAt: new Date(Date.UTC(2026, 0, n)).toISOString(),
+      tags: [],
+      ...memo,
+    },
+    role,
+    assignees: [],
+  };
+  mockApi.memos.push(entry);
+  return entry;
+};
+
+/** Tags the way the API stores them: lowercased, unique, sorted. */
+const storedTags = (tags: string[] = []) =>
+  [...new Set(tags.map((tag) => tag.trim().toLowerCase()))].sort();
 
 export const resetMockApi = () => {
   mockApi.session = false;
   mockApi.user = { ...testUser };
   mockApi.password = TEST_PASSWORD;
   mockApi.validTokens.clear();
+  mockApi.memos = [];
+  memoCount = 0;
 };
 
 const issueTokens = () => {
@@ -64,6 +112,21 @@ const isAuthorized = (request: Request) => {
 };
 
 const unauthorized = (message = 'Invalid token') => HttpResponse.json({ message }, { status: 401 });
+
+const forbidden = (message: string) => HttpResponse.json({ message }, { status: 403 });
+
+const NO_ACCESS = 'Memo not found or you do not have access to it';
+
+const findMemo = (uuid: unknown) => mockApi.memos.find((entry) => entry.memo.uuid === uuid);
+
+const listEntry = ({ memo, role }: MockMemo): MemoOnUser => ({
+  memoUuid: memo.uuid,
+  userUuid: mockApi.user.uuid,
+  assignedByUuid: mockApi.user.uuid,
+  assignedAt: memo.createdAt,
+  role,
+  memo,
+});
 
 /** Handlers for every endpoint the app calls, behaving like the real API. */
 export const handlers = [
@@ -101,6 +164,74 @@ export const handlers = [
   http.get(api('/users/me'), ({ request }) =>
     isAuthorized(request) ? HttpResponse.json(mockApi.user) : unauthorized(),
   ),
+
+  http.get(api('/memos'), ({ request }) =>
+    isAuthorized(request) ? HttpResponse.json(mockApi.memos.map(listEntry)) : unauthorized(),
+  ),
+
+  http.post(api('/memos/create'), async ({ request }) => {
+    if (!isAuthorized(request)) return unauthorized();
+    const body = (await request.json()) as MemoCreateRequest;
+    const { memo } = seedMemo({ title: body.title, content: body.content, role: 'ADMIN' });
+    memo.tags = storedTags(body.tags);
+    memo.createdAt = new Date().toISOString();
+    return HttpResponse.json(memo, { status: 201 });
+  }),
+
+  http.put(api('/memos/:memoUuid/tags'), async ({ request, params }) => {
+    if (!isAuthorized(request)) return unauthorized();
+    const entry = findMemo(params.memoUuid);
+    if (!entry) return forbidden(NO_ACCESS);
+    if (entry.role === 'USER')
+      return forbidden("Only the memo's ADMINs and MODs can change its tags");
+    const { tags } = (await request.json()) as MemoTagsUpdateRequest;
+    entry.memo = { ...entry.memo, tags: storedTags(tags) };
+    return HttpResponse.json(entry.memo);
+  }),
+
+  http.post(api('/memos/assign'), async ({ request }) => {
+    if (!isAuthorized(request)) return unauthorized();
+    const { memoUuid, userUuid, role = 'USER' } = (await request.json()) as MemoOnUserCreateRequest;
+    const entry = findMemo(memoUuid);
+    if (!entry) return forbidden(NO_ACCESS);
+    if (entry.role === 'USER') {
+      return forbidden('Only users with sufficient permissions can assign memos to other users');
+    }
+    if (entry.role === 'MOD' && role !== 'USER') {
+      return forbidden(`Only the memo's ADMINs can assign the ${role} role`);
+    }
+    if (!otherUsers.some((u) => u.uuid === userUuid)) {
+      return HttpResponse.json({ message: 'User not found' }, { status: 404 });
+    }
+    if (entry.assignees.some((a) => a.userUuid === userUuid)) {
+      return HttpResponse.json(
+        { message: 'The user is already assigned to the memo' },
+        { status: 409 },
+      );
+    }
+    entry.assignees.push({ userUuid, role });
+    const assigned: MemoOnUser = {
+      memoUuid,
+      userUuid,
+      assignedByUuid: mockApi.user.uuid,
+      assignedAt: new Date().toISOString(),
+      role,
+    };
+    return HttpResponse.json(assigned, { status: 201 });
+  }),
+
+  http.get(api('/tags'), ({ request }) => {
+    if (!isAuthorized(request)) return unauthorized();
+    const counts = new Map<string, number>();
+    for (const { memo } of mockApi.memos) {
+      for (const tag of memo.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+    return HttpResponse.json(
+      [...counts]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([name, memoCount]) => ({ name, memoCount })),
+    );
+  }),
 
   http.get(api('/users'), ({ request }) => {
     if (!isAuthorized(request)) return unauthorized();

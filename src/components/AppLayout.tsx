@@ -4,7 +4,10 @@ import { AppBar, Box, Button, Toolbar, Typography } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useAuth } from '../auth/useAuth';
 
-const navLinks = [{ to: '/profile', label: 'Profile' }];
+const navLinks = [
+  { to: '/profile', label: 'Profile' },
+  { to: '/memos', label: 'Memos' },
+];
 
 /**
  * The signed-in part of the app: a top bar with navigation and logout, then the page.

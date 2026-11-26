@@ -1,9 +1,8 @@
 import type { FC, ReactNode } from 'react';
-import { Avatar, Chip, Container, Paper, Stack, Typography } from '@mui/material';
+import { Link as RouterLink } from 'react-router';
+import { Avatar, Button, Chip, Container, Paper, Stack, Typography } from '@mui/material';
 import { useAuth } from '../auth/useAuth';
-
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+import { formatDate } from '../utils/format';
 
 /** The signed-in user's account. Only rendered inside RequireAuth, so `user` is set. */
 const ProfilePage: FC = () => {
@@ -36,6 +35,9 @@ const ProfilePage: FC = () => {
             </Typography>
           </ProfileField>
         </Stack>
+        <Button component={RouterLink} to='/memos' variant='contained' sx={{ mt: 3 }}>
+          My memos
+        </Button>
       </Paper>
     </Container>
   );
