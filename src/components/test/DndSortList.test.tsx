@@ -199,9 +199,14 @@ describe('DndSortList', () => {
       startDrag(0);
       enter(1);
 
-      getRows().forEach((row) =>
-        expect(contentOf(row).style.transition).toBe('transform 200ms ease'),
-      );
+      // Check the longhands: how the `transition` shorthand is serialized differs
+      // between engines (jsdom 31 drops the default `ease`).
+      getRows().forEach((row) => {
+        const { style } = contentOf(row);
+        expect(style.transitionProperty).toBe('transform');
+        expect(style.transitionDuration).toBe('200ms');
+        expect(style.transitionTimingFunction).toBe('ease');
+      });
     });
 
     it('clears transforms of items no longer in between when the target moves back', () => {
