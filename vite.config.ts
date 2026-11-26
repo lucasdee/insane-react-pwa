@@ -17,33 +17,7 @@ export default defineConfig({
         // ** means all directories, * means all files
 
         runtimeCaching: [
-          {
-            // API request caching
-            urlPattern: /^https:\/\/api\.example\.com\/.*/i,
-            // Caches API requests matching this pattern
-
-            handler: 'NetworkFirst',
-            // NetworkFirst: Try network first, use cache if it fails
-            // CacheFirst: Check cache first, make network request if not found
-            // StaleWhileRevalidate: Show cache first, update in background
-
-            options: {
-              cacheName: 'api-cache',
-              // Name for this cache
-
-              expiration: {
-                maxEntries: 50,
-                // Store maximum of 50 items in cache
-                maxAgeSeconds: 60 * 60 * 24,
-                // Cache expires after 24 hours (86400 seconds)
-              },
-
-              cacheableResponse: {
-                statuses: [0, 200],
-                // Only cache status codes 0 (CORS) and 200 (success)
-              },
-            },
-          },
+          // API responses are not cached: they are per user and need a fresh access token.
           {
             // Image caching
             urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
@@ -89,12 +63,20 @@ export default defineConfig({
         'src/main.tsx', // Entry point file
         'src/vite-env.d.ts', // Vite-specific environment types
         'src/setupTests.ts', // Test setup file
+        'src/test/**', // Test helpers (MSW server, render helpers)
+        'src/api/generated/**', // API types copied from insane-node-rest-api
         'src/**/*.stories.{ts,tsx}', // Storybook files, if any
         'src/**/*.mock.{ts,tsx}', // Mock files for tests
         '**/*.d.ts', // TypeScript declaration files
         'node_modules/**', // Dependencies
         'dist/**', // Build output
       ],
+      thresholds: {
+        lines: 90,
+        branches: 90,
+        functions: 90,
+        statements: 90,
+      },
     },
   },
 });

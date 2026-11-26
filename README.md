@@ -1,6 +1,6 @@
 # insane-react-pwa
 
-A small React + TypeScript + Vite starter with Material UI and PWA support (service worker, install prompt, offline indicators).
+A React + TypeScript + Vite PWA with Material UI, the frontend of [insane-node-rest-api](https://github.com/lucasdee/insane-node-rest-api): users register, log in and see their profile.
 
 Author: lucasdee
 
@@ -12,8 +12,11 @@ Install dependencies and start the dev server:
 
 ```bash
 npm install
+cp .env.example .env   # optional: the API URL defaults to http://localhost:3000
 npm run dev
 ```
+
+The app talks to a running insane-node-rest-api (see [Connecting to the API](#connecting-to-the-api)).
 
 Build and preview production output:
 
@@ -39,11 +42,29 @@ npm run format:check
 
 ## Features
 
+- Home screen, registration, login and a profile page, with routes only signed-in users can open
 - React + TypeScript powered by Vite
 - Material UI (MUI) for UI components
 - Progressive Web App support via `vite-plugin-pwa`
 - Service worker registration and runtime caching
 - Custom install prompt UI and offline indicator component
+
+## Connecting to the API
+
+- `VITE_API_URL` (in `.env`, see `.env.example`) is the API's base URL. It defaults to `http://localhost:3000`.
+- The API's `CORS_ORIGIN` must be this app's origin: `http://localhost:5173` for `npm run dev`.
+- Sessions use a short-lived access token, kept in memory only, and a refresh-token cookie (`HttpOnly`, `SameSite=Strict`, path `/auth`) set by the API. The cookie is only sent when the app and the API are on the same site: use the same host name for both (`localhost`, not `127.0.0.1`), and in production serve them from the same site.
+- `src/api/session.ts` refreshes the access token before it expires, or when a request gets a 401, and retries that request once. Refreshes are shared within a tab and serialized across tabs with a Web Lock, because the API rotates the refresh token on every use. A reload restores the session from the cookie.
+- API responses are never cached by the service worker.
+
+### API types
+
+The request and response types in `src/api/types.ts` come from `src/api/generated/api.ts`, a copy of the backend's committed `generated/api.ts` (generated from its OpenAPI spec). Don't edit it. After the backend API changes, copy it again and commit the result:
+
+```bash
+npm run types:sync                              # from ../insane-node-rest-api
+API_TYPES_SRC=/path/to/api.ts npm run types:sync # from another checkout
+```
 
 ## PWA details
 
@@ -59,8 +80,12 @@ Open DevTools → Application to inspect the registered service worker and cache
 - `package.json` — scripts and dependencies
 - `vite.config.ts` — plugin and PWA configuration
 - `index.html` — app entry
-- `src/main.tsx` — app bootstrap and SW registration
-- `src/App.tsx` — main app component
+- `src/main.tsx` — app bootstrap (theme, React Query, router, auth) and SW registration
+- `src/App.tsx` — routes
+- `src/api/` — API client, session handling and generated types
+- `src/auth/` — auth state (`AuthProvider`, `useAuth`) and route guards
+- `src/pages/` — home, login, register and profile pages
+- `src/utils/validation.ts` — form checks mirroring the API's rules
 - `src/components/InstallPrompt.tsx` — custom PWA install UI
 - `src/components/Offline.tsx` — offline indicator component
 - `src/hooks/useOnlineStatus.ts` — online/offline hook
@@ -68,7 +93,7 @@ Open DevTools → Application to inspect the registered service worker and cache
 
 ## Testing
 
-Unit tests are powered by Vitest and React Testing Library. Example tests live in `src/components/test/` and test setup is in `src/setupTests.ts`.
+Unit tests are powered by Vitest, React Testing Library and user-event. They live in `test/` folders next to the code; setup is in `src/setupTests.ts`. Requests go to an [MSW](https://mswjs.io) server (`src/test/server.ts`) whose handlers in `src/test/handlers.ts` behave like the API, so no backend is needed; override them per test with `server.use(...)`. `renderWithProviders` (`src/test/renderWithProviders.tsx`) renders with React Query, a router and the auth provider. Coverage must stay at 90% or more.
 
 ```bash
 npm run test
