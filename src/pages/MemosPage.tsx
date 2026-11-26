@@ -1,4 +1,4 @@
-import { useState, type FC } from 'react';
+import { useEffect, useState, type FC } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router';
 import {
   Alert,
@@ -30,15 +30,19 @@ const MemosPage: FC = () => {
   const navigate = useNavigate();
   const [editing, setEditing] = useState<MemoListItem | null>(null);
   const [assigning, setAssigning] = useState<MemoListItem | null>(null);
-  const [localNotice, setLocalNotice] = useState<string | null>(null);
-
   const stateNotice = (location.state as MemosPageState | null)?.notice;
-  const notice = localNotice ?? stateNotice ?? null;
+  const [notice, setNotice] = useState<string | null>(stateNotice ?? null);
 
-  const closeNotice = () => {
-    setLocalNotice(null);
-    // Forget the message passed in, so it doesn't come back on reload.
+  // Take over a message passed in and drop it from the history entry right away, so it
+  // doesn't come back on reload or Back. Done here, not when the message closes: a
+  // navigation then could undo one the user started meanwhile, e.g. to "New memo".
+  useEffect(() => {
     if (stateNotice) navigate(location.pathname, { replace: true, state: null });
+  }, [stateNotice, location.pathname, navigate]);
+
+  const closeNotice = (_event: unknown, reason?: string) => {
+    // A click elsewhere shouldn't cut the message short; it still hides after a while.
+    if (reason !== 'clickaway') setNotice(null);
   };
 
   return (
@@ -103,7 +107,7 @@ const MemosPage: FC = () => {
         onClose={() => setEditing(null)}
         onSaved={() => {
           setEditing(null);
-          setLocalNotice('Tags saved');
+          setNotice('Tags saved');
         }}
       />
       <AssignMemoDialog
@@ -111,7 +115,7 @@ const MemosPage: FC = () => {
         onClose={() => setAssigning(null)}
         onAssigned={(user, role) => {
           setAssigning(null);
-          setLocalNotice(`Assigned to ${userLabel(user)} as ${role}`);
+          setNotice(`Assigned to ${userLabel(user)} as ${role}`);
         }}
       />
       <Snackbar

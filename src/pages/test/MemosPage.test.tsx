@@ -140,6 +140,30 @@ describe('MemosPage', () => {
     await waitForNoDialog();
   });
 
+  it('opens "New memo" while a message is showing', async () => {
+    const { user } = renderMemos({
+      route: { pathname: '/memos', state: { notice: 'Created “Plan”' } },
+    });
+    expect(await screen.findByText('Created “Plan”')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('link', { name: 'New memo' }));
+
+    expect(await screen.findByRole('heading', { name: 'New memo' })).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/memos/new');
+  });
+
+  it('keeps a message when the user clicks elsewhere', async () => {
+    seedMemo({ title: 'Plan' });
+    const { user } = renderMemos({
+      route: { pathname: '/memos', state: { notice: 'Created “Plan”' } },
+    });
+    await screen.findByRole('article', { name: 'Plan' });
+
+    await user.click(screen.getByRole('heading', { name: 'My memos' }));
+
+    expect(screen.getByText('Created “Plan”')).toBeInTheDocument();
+  });
+
   it('shows a message passed in by another page, then forgets it', async () => {
     const { user } = renderMemos({
       route: { pathname: '/memos', state: { notice: 'Created “Plan”' } },
