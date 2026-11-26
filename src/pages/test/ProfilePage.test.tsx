@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import ProfilePage from '../ProfilePage';
 import { AuthContext, type AuthContextValue } from '../../auth/AuthContext';
 import { testUser } from '../../test/handlers';
@@ -14,9 +15,11 @@ const renderProfile = (user: User | null) => {
     logout: async () => {},
   };
   return render(
-    <AuthContext.Provider value={value}>
-      <ProfilePage />
-    </AuthContext.Provider>,
+    <MemoryRouter>
+      <AuthContext.Provider value={value}>
+        <ProfilePage />
+      </AuthContext.Provider>
+    </MemoryRouter>,
   );
 };
 
@@ -33,6 +36,12 @@ describe('ProfilePage', () => {
     expect(valueOf('Role')).toHaveTextContent('USER');
     expect(valueOf('Member since')).toHaveTextContent('2026');
     expect(valueOf('User ID')).toHaveTextContent(testUser.uuid);
+  });
+
+  it('links to the user’s memos', () => {
+    renderProfile(testUser);
+
+    expect(screen.getByRole('link', { name: 'My memos' })).toHaveAttribute('href', '/memos');
   });
 
   it('uses the username when there is no display name', () => {

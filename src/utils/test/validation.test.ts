@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  MAX_TAGS,
   hasErrors,
+  normalizeTags,
+  validateContent,
+  validateMemo,
+  validateTag,
+  validateTags,
+  validateTitle,
   validateDisplayName,
   validateEmail,
   validateLogin,
@@ -108,5 +115,67 @@ describe('hasErrors', () => {
   it('is true when any field has an error', () => {
     expect(hasErrors({})).toBe(false);
     expect(hasErrors({ username: 'x' })).toBe(true);
+  });
+});
+
+describe('normalizeTags', () => {
+  it('trims, lowercases and de-duplicates, dropping empty tags', () => {
+    expect(normalizeTags([' Home ', 'home', 'WORK', '', '  '])).toEqual(['home', 'work']);
+  });
+});
+
+describe('validateTag', () => {
+  it.each(['a', 'home', 'to-do', 'v1_2', 'A'.repeat(32)])('accepts %s', (tag) => {
+    expect(validateTag(tag)).toBeUndefined();
+  });
+
+  it.each(['', '-start', '_start', 'has space', 'ąę', 'a'.repeat(33)])('rejects "%s"', (tag) => {
+    expect(validateTag(tag)).toMatch(/^Tags may only contain/);
+  });
+});
+
+describe('validateTags', () => {
+  it(`allows up to ${MAX_TAGS} valid tags`, () => {
+    expect(validateTags([])).toBeUndefined();
+    expect(validateTags(Array.from({ length: MAX_TAGS }, (_, i) => `t${i}`))).toBeUndefined();
+  });
+
+  it('rejects too many tags or an invalid one', () => {
+    expect(validateTags(Array.from({ length: MAX_TAGS + 1 }, (_, i) => `t${i}`))).toBe(
+      'Please provide at most 10 tags',
+    );
+    expect(validateTags(['ok', 'not ok'])).toMatch(/^Tags may only contain/);
+  });
+});
+
+describe('validateTitle and validateContent', () => {
+  it.each([
+    ['ab', 'Please provide a title that is at least 3 characters long'],
+    ['  ab  ', 'Please provide a title that is at least 3 characters long'],
+    ['a'.repeat(129), 'Please provide a title that is at most 128 characters long'],
+    ['abc', undefined],
+    ['a'.repeat(128), undefined],
+  ])('title %s -> %s', (title, message) => {
+    expect(validateTitle(title)).toBe(message);
+  });
+
+  it.each([
+    ['ab', 'Please provide content that is at least 3 characters long'],
+    ['a'.repeat(10001), 'Please provide content that is at most 10000 characters long'],
+    ['abc', undefined],
+    ['a'.repeat(10000), undefined],
+  ])('content of length %#', (content, message) => {
+    expect(validateContent(content)).toBe(message);
+  });
+});
+
+describe('validateMemo', () => {
+  it('reports each invalid field', () => {
+    expect(validateMemo({ title: 'Plan', content: 'Things to do', tags: ['home'] })).toEqual({});
+    expect(validateMemo({ title: '', content: '', tags: ['bad tag'] })).toEqual({
+      title: expect.stringMatching(/title/),
+      content: expect.stringMatching(/content/),
+      tags: expect.stringMatching(/^Tags may only contain/),
+    });
   });
 });

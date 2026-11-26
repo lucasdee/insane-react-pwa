@@ -21,17 +21,18 @@ export const hasStatus = (error: unknown, ...statuses: number[]): error is ApiEr
   isApiError(error) && statuses.includes(error.status);
 
 /**
- * The field messages of a 422 response, keyed by field name: `body.username` and
- * `username` both become `username`.
+ * The field messages of a 422 response, keyed by top-level field name: `body.username`
+ * and `username` both become `username`, and an invalid list item such as
+ * `body.tags.$1` becomes `tags`. The first message for a field wins.
  */
 export const fieldErrors = (error: unknown): Record<string, string> => {
   if (!isApiError(error) || !error.details) return {};
-  return Object.fromEntries(
-    Object.entries(error.details).map(([key, detail]) => [
-      key.replace(/^body\./, ''),
-      detail.message,
-    ]),
-  );
+  const errors: Record<string, string> = {};
+  for (const [key, detail] of Object.entries(error.details)) {
+    const field = key.replace(/^body\./, '').split(/[.[]/)[0];
+    errors[field] ??= detail.message;
+  }
+  return errors;
 };
 
 /** A message to show for any error thrown while talking to the API. */

@@ -40,6 +40,15 @@ describe('fieldErrors', () => {
     expect(fieldErrors(error)).toEqual({ username: 'Too short', search: 'Too long' });
   });
 
+  it('reports an invalid list item under its list, keeping the first message', () => {
+    const error = new ApiError(422, 'Validation failed', {
+      'body.tags.$1': { message: 'Bad tag' },
+      'body.tags': { message: 'Too many tags' },
+    });
+
+    expect(fieldErrors(error)).toEqual({ tags: 'Bad tag' });
+  });
+
   it('is empty for errors without details', () => {
     expect(fieldErrors(new ApiError(401, 'x'))).toEqual({});
     expect(fieldErrors(new Error('x'))).toEqual({});

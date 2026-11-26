@@ -19,9 +19,19 @@ describe('AppLayout', () => {
 
     expect(screen.getByRole('banner')).toHaveTextContent('insane-react-pwa');
     expect(screen.getByRole('link', { name: 'Profile' })).toHaveClass('active');
+    expect(screen.getByRole('link', { name: 'Memos' })).not.toHaveClass('active');
     expect(screen.getByRole('main')).toContainElement(
       screen.getByRole('heading', { name: 'Alice Liddell' }),
     );
+  });
+
+  it('navigates to the memos', async () => {
+    const { user } = await renderSignedIn();
+
+    await user.click(screen.getByRole('link', { name: 'Memos' }));
+
+    expect(await screen.findByRole('heading', { name: 'My memos' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Memos' })).toHaveClass('active');
   });
 
   it('logs out and returns to the home screen', async () => {
