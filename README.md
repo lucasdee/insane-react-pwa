@@ -6,7 +6,7 @@ Author: lucasdee
 
 ## Quick start
 
-Prerequisites: Node.js 24 and npm.
+Prerequisites: Node.js 26 and npm.
 
 Install dependencies and start the dev server:
 
