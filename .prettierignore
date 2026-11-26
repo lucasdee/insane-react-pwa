@@ -3,3 +3,4 @@ dist
 build
 public
 README.md
+src/api/generated

@@ -8,7 +8,7 @@ import prettier from 'eslint-config-prettier';
 import eslintPluginPrettier from 'eslint-plugin-prettier';
 
 export default defineConfig([
-  globalIgnores(['dist', 'coverage']),
+  globalIgnores(['dist', 'coverage', 'src/api/generated']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -20,6 +20,14 @@ export default defineConfig([
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
+    },
+  },
+
+  {
+    // Test helpers export render functions next to components; fast refresh never loads them.
+    files: ['src/test/**', 'src/**/test/**'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
     },
   },
 
