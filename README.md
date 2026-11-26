@@ -1,6 +1,6 @@
 # insane-react-pwa
 
-A React + TypeScript + Vite PWA with Material UI, the frontend of [insane-node-rest-api](https://github.com/lucasdee/insane-node-rest-api): users register, log in and see their profile.
+A React + TypeScript + Vite PWA with Material UI, the frontend of [insane-node-rest-api](https://github.com/lucasdee/insane-node-rest-api): users register, log in, see their profile, and create, share and tag memos.
 
 Author: lucasdee
 
@@ -43,6 +43,7 @@ npm run format:check
 ## Features
 
 - Home screen, registration, login and a profile page, with routes only signed-in users can open
+- Memos: list the memos assigned to you, create memos, assign them to other users (searched by name) and edit their tags. What you can do with a memo depends on your role on it: its ADMINs can assign any role and edit tags, its MODs can assign USERs and edit tags, its USERs can read it
 - React + TypeScript powered by Vite
 - Material UI (MUI) for UI components
 - Progressive Web App support via `vite-plugin-pwa`
@@ -84,8 +85,11 @@ Open DevTools → Application to inspect the registered service worker and cache
 - `src/App.tsx` — routes
 - `src/api/` — API client, session handling and generated types
 - `src/auth/` — auth state (`AuthProvider`, `useAuth`) and route guards
-- `src/pages/` — home, login, register and profile pages
-- `src/utils/validation.ts` — form checks mirroring the API's rules
+- `src/pages/` — home, login, register, profile, memo list and new memo pages
+- `src/components/memos/` — memo card, tag input, user search, edit tags and assign dialogs
+- `src/hooks/useMemos.ts`, `src/hooks/useUserSearch.ts` — React Query hooks for memos, tags and users
+- `src/utils/permissions.ts` — what each role on a memo allows
+- `src/utils/validation.ts` — form and tag checks mirroring the API's rules
 - `src/components/InstallPrompt.tsx` — custom PWA install UI
 - `src/components/Offline.tsx` — offline indicator component
 - `src/hooks/useOnlineStatus.ts` — online/offline hook
