@@ -227,6 +227,17 @@ export const handlers = [
     return HttpResponse.json(entry.memo);
   }),
 
+  http.delete(api('/memos/:memoUuid'), ({ request, params }) => {
+    if (!isAuthorized(request)) return unauthorized();
+    const entry = findMemo(params.memoUuid);
+    if (!entry) return forbidden(NO_ACCESS);
+    if (entry.memo.authorUuid !== mockApi.user.uuid && entry.role !== 'ADMIN') {
+      return forbidden("Only the memo's author and ADMINs can delete it");
+    }
+    mockApi.memos = mockApi.memos.filter((other) => other !== entry);
+    return new HttpResponse(null, { status: 204 });
+  }),
+
   http.put(api('/memos/:memoUuid/tags'), async ({ request, params }) => {
     if (!isAuthorized(request)) return unauthorized();
     const entry = findMemo(params.memoUuid);

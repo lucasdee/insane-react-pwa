@@ -10,13 +10,14 @@ import {
   tagsKey,
   useAssignMemo,
   useCreateMemo,
+  useDeleteMemo,
   useMemoQuery,
   useMemosQuery,
   useReplaceTags,
   useTagsQuery,
   useUpdateMemo,
 } from '../useMemos';
-import { api, mockApi, otherUsers, seedMemo } from '../../test/handlers';
+import { api, authoredBy, mockApi, otherUsers, seedMemo } from '../../test/handlers';
 import { server } from '../../test/server';
 import { createTestQueryClient } from '../../test/renderWithProviders';
 import type { MemoOnUser } from '../../api/types';
@@ -139,6 +140,35 @@ describe('mutations', () => {
     expect(saved.title).toBe('New');
     expect(invalidate).toHaveBeenCalledWith({ queryKey: memosKey });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: tagsKey });
+  });
+
+  it('useDeleteMemo drops the memo from the cache, then refetches memos and tags', async () => {
+    const { memo } = seedMemo({ title: 'Gone' });
+    seedMemo({ title: 'Kept' });
+    const list = renderHook(() => useMemosQuery(), { wrapper });
+    await waitFor(() => expect(list.result.current.data).toHaveLength(2));
+    queryClient.setQueryData(memoKey(memo.uuid), { memoUuid: memo.uuid });
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    const { result } = renderHook(() => useDeleteMemo(), { wrapper });
+
+    await act(() => result.current.mutateAsync(memo.uuid));
+
+    expect(mockApi.memos.map((m) => m.memo.title)).toEqual(['Kept']);
+    expect(list.result.current.data?.map((i) => i.memo.title)).toEqual(['Kept']);
+    expect(queryClient.getQueryState(memoKey(memo.uuid))).toBeUndefined();
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: memosKey });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: tagsKey });
+  });
+
+  it('useDeleteMemo leaves the cache alone when the API refuses', async () => {
+    const { memo } = seedMemo({ role: 'MOD', ...authoredBy(otherUsers[0]) });
+    queryClient.setQueryData(memoKey(memo.uuid), { memoUuid: memo.uuid });
+    const { result } = renderHook(() => useDeleteMemo(), { wrapper });
+
+    await act(() => result.current.mutateAsync(memo.uuid).catch(() => undefined));
+
+    expect(result.current.isError).toBe(true);
+    expect(queryClient.getQueryData(memoKey(memo.uuid))).toEqual({ memoUuid: memo.uuid });
   });
 
   it('useReplaceTags replaces the tags and refetches memos and tags', async () => {

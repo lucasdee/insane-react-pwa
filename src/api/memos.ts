@@ -29,6 +29,13 @@ export const getMemo = (memoUuid: string) => authFetch<MemoOnUser>(memoPath(memo
 export const updateMemo = (memoUuid: string, body: MemoUpdateRequest) =>
   authFetch<Memo>(memoPath(memoUuid), { method: 'PATCH', body });
 
+/**
+ * Deletes a memo for everyone it is assigned to, with its assignments and tag links.
+ * Only its author and ADMINs can do this.
+ */
+export const deleteMemo = (memoUuid: string) =>
+  authFetch<void>(memoPath(memoUuid), { method: 'DELETE' });
+
 /** Replaces all of a memo's tags. Only its author, MODs and ADMINs can do this. */
 export const replaceMemoTags = (memoUuid: string, tags: string[]) =>
   authFetch<Memo>(`${memoPath(memoUuid)}/tags`, { method: 'PUT', body: { tags } });

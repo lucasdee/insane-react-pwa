@@ -177,6 +177,35 @@ describe('MemosPage', () => {
     await waitForNoDialog();
   });
 
+  it('deletes a memo after confirming, and confirms it', async () => {
+    seedMemo({ title: 'Old plan' });
+    seedMemo({ title: 'Kept' });
+    const { user } = renderMemos();
+    await screen.findByRole('article', { name: 'Old plan' });
+
+    await user.click(within(card('Old plan')).getByRole('button', { name: 'Delete' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
+
+    expect(await screen.findByText('Deleted “Old plan”')).toBeInTheDocument();
+    await waitForNoDialog();
+    expect(screen.queryByRole('article', { name: 'Old plan' })).not.toBeInTheDocument();
+    expect(screen.getByRole('article', { name: 'Kept' })).toBeInTheDocument();
+    expect(mockApi.memos.map((m) => m.memo.title)).toEqual(['Kept']);
+  });
+
+  it('keeps the memo when deleting is cancelled', async () => {
+    seedMemo({ title: 'Plan' });
+    const { user } = renderMemos();
+    await screen.findByRole('article', { name: 'Plan' });
+
+    await user.click(within(card('Plan')).getByRole('button', { name: 'Delete' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+
+    await waitForNoDialog();
+    expect(card('Plan')).toBeInTheDocument();
+    expect(mockApi.memos).toHaveLength(1);
+  });
+
   it('opens "New memo" while a message is showing', async () => {
     const { user } = renderMemos({
       route: { pathname: '/memos', state: { notice: 'Created “Plan”' } },

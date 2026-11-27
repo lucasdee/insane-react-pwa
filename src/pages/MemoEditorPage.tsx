@@ -1,4 +1,4 @@
-import type { FC } from 'react';
+import { useState, type FC } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router';
 import {
   Alert,
@@ -12,12 +12,14 @@ import {
   Typography,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import AuthorChip from '../components/memos/AuthorChip';
+import DeleteMemoDialog from '../components/memos/DeleteMemoDialog';
 import MemoForm from '../components/memos/MemoForm';
 import { useMemoQuery, useUpdateMemo } from '../hooks/useMemos';
 import { useAuth } from '../auth/useAuth';
 import { errorMessage, hasStatus } from '../api/errors';
-import { canEditMemo, isAuthor } from '../utils/permissions';
+import { canDeleteMemo, canEditMemo, isAuthor } from '../utils/permissions';
 import { formatDate } from '../utils/format';
 import type { MemoListItem } from '../api/types';
 import type { MemoValues } from '../utils/validation';
@@ -25,7 +27,8 @@ import type { MemosPageState } from './MemosPage';
 
 /**
  * One memo: an edit form for its author, MODs and ADMINs, read-only for everyone
- * else. Returns to the list after saving.
+ * else, and a Delete button for its author and ADMINs. Returns to the list after
+ * saving or deleting.
  */
 const MemoEditorPage: FC = () => {
   const { memoUuid = '' } = useParams();
@@ -70,19 +73,43 @@ const MemoDetails: FC<{ item: MemoListItem }> = ({ item }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const updateMemo = useUpdateMemo();
-  const editable = canEditMemo(role, isAuthor(memo, user?.uuid));
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const author = isAuthor(memo, user?.uuid);
+  const editable = canEditMemo(role, author);
+  const deletable = canDeleteMemo(role, author);
+
+  const backToList = (notice: string) => {
+    const state: MemosPageState = { notice };
+    navigate('/memos', { state });
+  };
 
   const save = async (values: MemoValues) => {
     await updateMemo.mutateAsync({ memoUuid: memo.uuid, changes: values });
-    const state: MemosPageState = { notice: `Saved “${values.title}”` };
-    navigate('/memos', { state });
+    backToList(`Saved “${values.title}”`);
   };
 
   return (
     <Paper sx={{ p: { xs: 3, sm: 4 } }}>
-      <Typography variant='h5' component='h1' gutterBottom sx={{ wordBreak: 'break-word' }}>
-        {editable ? 'Edit memo' : memo.title}
-      </Typography>
+      <Stack direction='row' spacing={2} sx={{ justifyContent: 'space-between' }}>
+        <Typography variant='h5' component='h1' gutterBottom sx={{ wordBreak: 'break-word' }}>
+          {editable ? 'Edit memo' : memo.title}
+        </Typography>
+        {deletable && (
+          <Button
+            color='error'
+            startIcon={<DeleteOutlinedIcon />}
+            onClick={() => setConfirmingDelete(true)}
+            sx={{ flexShrink: 0, alignSelf: 'flex-start' }}
+          >
+            Delete
+          </Button>
+        )}
+      </Stack>
+      <DeleteMemoDialog
+        memo={confirmingDelete ? memo : null}
+        onClose={() => setConfirmingDelete(false)}
+        onDeleted={(deleted) => backToList(`Deleted “${deleted.title}”`)}
+      />
       <Stack direction='row' sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 3 }}>
         <Typography variant='body2' color='text.secondary'>
           {formatDate(memo.createdAt)}

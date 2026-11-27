@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   assignMemo,
   createMemo,
+  deleteMemo,
   getMemo,
   listMemos,
   listTags,
@@ -62,6 +63,26 @@ export const useUpdateMemo = () => {
     mutationFn: ({ memoUuid, changes }: { memoUuid: string; changes: MemoUpdateRequest }) =>
       updateMemo(memoUuid, changes),
     onSuccess: invalidate,
+  });
+};
+
+/**
+ * Deletes a memo. It leaves the cached list right away and its own query is dropped,
+ * so a page still showing it doesn't refetch it; memos and tags are then refetched
+ * without waiting, so callers can navigate away at once.
+ */
+export const useDeleteMemo = () => {
+  const queryClient = useQueryClient();
+  const invalidate = useInvalidateMemos();
+  return useMutation({
+    mutationFn: deleteMemo,
+    onSuccess: (_data, memoUuid) => {
+      queryClient.setQueryData<MemoOnUser[]>(memosKey, (items) =>
+        items?.filter((item) => item.memoUuid !== memoUuid),
+      );
+      queryClient.removeQueries({ queryKey: memoKey(memoUuid), exact: true });
+      void invalidate();
+    },
   });
 };
 
