@@ -93,7 +93,9 @@ describe('AssignMemoDialog', () => {
 
     await pickBob(user);
     await chooseRole(user, 'MOD');
-    expect(within(dialog()).getByText('Can also edit tags and assign users')).toBeInTheDocument();
+    expect(
+      within(dialog()).getByText('Can also edit the memo and assign users'),
+    ).toBeInTheDocument();
     await submit(user);
 
     await vi.waitFor(() => expect(onAssigned).toHaveBeenCalledWith(bob, 'MOD'));

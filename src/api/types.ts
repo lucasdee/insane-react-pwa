@@ -10,6 +10,7 @@ export type {
   MemoOnUser,
   MemoOnUserCreateRequest,
   MemoTagsUpdateRequest,
+  MemoUpdateRequest,
   RegisterRequest,
   TagCount,
   TagName,

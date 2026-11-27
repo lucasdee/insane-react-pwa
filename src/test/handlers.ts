@@ -8,6 +8,7 @@ import type {
   MemoOnUser,
   MemoOnUserCreateRequest,
   MemoTagsUpdateRequest,
+  MemoUpdateRequest,
   RegisterRequest,
   Role,
   User,
@@ -142,6 +143,10 @@ const NO_ACCESS = 'Memo not found or you do not have access to it';
 
 const findMemo = (uuid: unknown) => mockApi.memos.find((entry) => entry.memo.uuid === uuid);
 
+/** Like the API: a memo's author, MODs and ADMINs may edit it and replace its tags. */
+const canEdit = ({ memo, role }: MockMemo) =>
+  memo.authorUuid === mockApi.user.uuid || role === 'MOD' || role === 'ADMIN';
+
 const listEntry = ({ memo, role }: MockMemo): MemoOnUser => ({
   memoUuid: memo.uuid,
   userUuid: mockApi.user.uuid,
@@ -201,12 +206,34 @@ export const handlers = [
     return HttpResponse.json(memo, { status: 201 });
   }),
 
+  http.get(api('/memos/:memoUuid'), ({ request, params }) => {
+    if (!isAuthorized(request)) return unauthorized();
+    const entry = findMemo(params.memoUuid);
+    return entry ? HttpResponse.json(listEntry(entry)) : forbidden(NO_ACCESS);
+  }),
+
+  http.patch(api('/memos/:memoUuid'), async ({ request, params }) => {
+    if (!isAuthorized(request)) return unauthorized();
+    const entry = findMemo(params.memoUuid);
+    if (!entry) return forbidden(NO_ACCESS);
+    if (!canEdit(entry)) return forbidden("Only the memo's author, ADMINs and MODs can edit it");
+    const { title, content, tags } = (await request.json()) as MemoUpdateRequest;
+    entry.memo = {
+      ...entry.memo,
+      ...(title !== undefined && { title }),
+      ...(content !== undefined && { content }),
+      ...(tags !== undefined && { tags: storedTags(tags) }),
+    };
+    return HttpResponse.json(entry.memo);
+  }),
+
   http.put(api('/memos/:memoUuid/tags'), async ({ request, params }) => {
     if (!isAuthorized(request)) return unauthorized();
     const entry = findMemo(params.memoUuid);
     if (!entry) return forbidden(NO_ACCESS);
-    if (entry.role === 'USER')
-      return forbidden("Only the memo's ADMINs and MODs can change its tags");
+    if (!canEdit(entry)) {
+      return forbidden("Only the memo's author, ADMINs and MODs can change its tags");
+    }
     const { tags } = (await request.json()) as MemoTagsUpdateRequest;
     entry.memo = { ...entry.memo, tags: storedTags(tags) };
     return HttpResponse.json(entry.memo);

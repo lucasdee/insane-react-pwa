@@ -12,6 +12,7 @@ import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
 import MemosPage from './pages/MemosPage';
 import CreateMemoPage from './pages/CreateMemoPage';
+import MemoEditorPage from './pages/MemoEditorPage';
 
 export const AppRoutes: FC = () => (
   <Routes>
@@ -25,6 +26,7 @@ export const AppRoutes: FC = () => (
         <Route path='profile' element={<ProfilePage />} />
         <Route path='memos' element={<MemosPage />} />
         <Route path='memos/new' element={<CreateMemoPage />} />
+        <Route path='memos/:memoUuid' element={<MemoEditorPage />} />
       </Route>
     </Route>
     <Route path='*' element={<Navigate to='/' replace />} />
