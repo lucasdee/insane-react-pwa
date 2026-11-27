@@ -60,6 +60,13 @@ export interface Memo {
   content: string;
   /** @example "5f0c1a2b-3c4d-4e5f-8a9b-0c1d2e3f4a5b" */
   authorUuid: string;
+  /** @example "alice" */
+  authorUsername: string;
+  /**
+   * The author's display name, or null if they have not set one.
+   * @example "Alice"
+   */
+  authorDisplayName: string | null;
   /**
    * @format date-time
    * @example "2024-01-01T00:00:00.000Z"
@@ -110,6 +117,29 @@ export interface MemoCreateRequest {
   content: string;
   /**
    * Tags to put on the memo. Duplicates (ignoring case) are merged.
+   * @maxItems 10
+   * @example ["groceries","home"]
+   */
+  tags?: TagName[];
+}
+
+/** Changes to a memo. Fields left out stay as they are. */
+export interface MemoUpdateRequest {
+  /**
+   * @minLength 3
+   * @maxLength 128
+   * @example "My edited memo"
+   */
+  title?: string;
+  /**
+   * @minLength 3
+   * @maxLength 10000
+   * @example "This is the edited content of my memo."
+   */
+  content?: string;
+  /**
+   * The memo's new tags, replacing all current ones. An empty list removes them all.
+   * Duplicates (ignoring case) are merged.
    * @maxItems 10
    * @example ["groceries","home"]
    */
@@ -595,7 +625,63 @@ export class Api<
       }),
 
     /**
-     * @description Replaces all of a memo's tags. Only the memo's ADMINs and MODs can do this.
+     * @description Returns your assignment to a memo, with the memo.
+     *
+     * @tags Memos
+     * @name GetMemo
+     * @request GET:/memos/{memoUuid}
+     * @secure
+     */
+    getMemo: (memoUuid: string, params: RequestParams = {}) =>
+      this.request<MemoOnUser, void>({
+        path: `/memos/${memoUuid}`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Changes a memo's title, content and tags. Fields left out stay as they are. Only the memo's author, ADMINs and MODs can do this.
+     *
+     * @tags Memos
+     * @name UpdateMemo
+     * @request PATCH:/memos/{memoUuid}
+     * @secure
+     */
+    updateMemo: (
+      memoUuid: string,
+      data: MemoUpdateRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<Memo, void>({
+        path: `/memos/${memoUuid}`,
+        method: "PATCH",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Deletes a memo for everyone it is assigned to, with its assignments and tag links. Only the memo's author and ADMINs can do this.
+     *
+     * @tags Memos
+     * @name DeleteMemo
+     * @request DELETE:/memos/{memoUuid}
+     * @secure
+     */
+    deleteMemo: (memoUuid: string, params: RequestParams = {}) =>
+      this.request<void, void>({
+        path: `/memos/${memoUuid}`,
+        method: "DELETE",
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * @description Replaces all of a memo's tags. Only the memo's author, ADMINs and MODs can do this.
      *
      * @tags Memos
      * @name ReplaceMemoTags

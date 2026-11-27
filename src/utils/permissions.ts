@@ -1,4 +1,8 @@
-import type { Role } from '../api/types';
+import type { Memo, Role } from '../api/types';
+
+/** Whether the user with this uuid wrote the memo. */
+export const isAuthor = (memo: Memo, userUuid: string | undefined): boolean =>
+  userUuid !== undefined && memo.authorUuid === userUuid;
 
 // What a user may do with a memo depends on their role on that memo (not their
 // global role). These mirror the API's rules, so the UI only offers allowed actions;

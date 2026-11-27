@@ -3,7 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { AppRoutes } from '../../App';
 import { server } from '../../test/server';
-import { api, mockApi, seedMemo } from '../../test/handlers';
+import { api, authoredBy, mockApi, otherUsers, seedMemo } from '../../test/handlers';
 import { renderWithProviders } from '../../test/renderWithProviders';
 
 beforeEach(() => {
@@ -67,6 +67,17 @@ describe('MemosPage', () => {
     await user.click(screen.getByRole('button', { name: 'Retry' }));
 
     expect(await screen.findByRole('article', { name: 'Back again' })).toBeInTheDocument();
+  });
+
+  it('marks the user’s own memos and names the author of the others', async () => {
+    seedMemo({ title: 'Mine' });
+    seedMemo({ title: 'From Bob', role: 'MOD', ...authoredBy(otherUsers[0]) });
+    renderMemos();
+    await screen.findByRole('article', { name: 'Mine' });
+
+    expect(within(card('Mine')).getByText('You’re the author')).toBeInTheDocument();
+    expect(within(card('From Bob')).getByText('By Bob Builder (@bob)')).toBeInTheDocument();
+    expect(within(card('From Bob')).queryByText('You’re the author')).not.toBeInTheDocument();
   });
 
   it('only offers the actions each memo’s role allows', async () => {

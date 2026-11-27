@@ -5,15 +5,18 @@ import PersonAddAlt1OutlinedIcon from '@mui/icons-material/PersonAddAlt1Outlined
 import type { MemoListItem } from '../../api/types';
 import { canAssign, canEditTags } from '../../utils/permissions';
 import { formatDate } from '../../utils/format';
+import AuthorChip from './AuthorChip';
 
 type Props = {
   item: MemoListItem;
+  /** The signed-in user's uuid, to tell whether they wrote the memo. */
+  currentUserUuid: string | undefined;
   onEditTags: (item: MemoListItem) => void;
   onAssign: (item: MemoListItem) => void;
 };
 
-/** One memo, with the actions the user's role on it allows. */
-const MemoCard: FC<Props> = ({ item, onEditTags, onAssign }) => {
+/** One memo, with who wrote it and the actions the user's role on it allows. */
+const MemoCard: FC<Props> = ({ item, currentUserUuid, onEditTags, onAssign }) => {
   const { memo, role } = item;
   const titleId = `memo-title-${memo.uuid}`;
   const showEditTags = canEditTags(role);
@@ -28,9 +31,12 @@ const MemoCard: FC<Props> = ({ item, onEditTags, onAssign }) => {
           </Typography>
           <Chip label={`Your role: ${role}`} size='small' sx={{ flexShrink: 0 }} />
         </Stack>
-        <Typography variant='body2' color='text.secondary'>
-          {formatDate(memo.createdAt)}
-        </Typography>
+        <Stack direction='row' sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+          <Typography variant='body2' color='text.secondary'>
+            {formatDate(memo.createdAt)}
+          </Typography>
+          <AuthorChip memo={memo} currentUserUuid={currentUserUuid} />
+        </Stack>
         <Typography sx={{ mt: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
           {memo.content}
         </Typography>
