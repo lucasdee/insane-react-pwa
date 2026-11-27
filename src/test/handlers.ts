@@ -4,6 +4,7 @@ import type {
   AuthResponse,
   LoginRequest,
   Memo,
+  MemoAssignment,
   MemoCreateRequest,
   MemoOnUser,
   MemoOnUserCreateRequest,
@@ -45,8 +46,17 @@ export const authResponse = (minutes = 5): AuthResponse => ({
   refreshTokenExpiresOn: Date.now() + 7 * 24 * 60 * MINUTE,
 });
 
-/** A memo in the fake API: the signed-in user's role on it, and who else it is assigned to. */
-export type MockMemo = { memo: Memo; role: Role; assignees: { userUuid: string; role: Role }[] };
+/**
+ * Another user a memo is assigned to, and who assigned them: the signed-in user unless
+ * `assignedByUuid` says otherwise.
+ */
+export type MockAssignee = { userUuid: string; role: Role; assignedByUuid?: string };
+
+/**
+ * A memo in the fake API: the signed-in user's role on it, and who else it is assigned
+ * to. Its author is assigned as ADMIN even when not listed in `assignees`.
+ */
+export type MockMemo = { memo: Memo; role: Role; assignees: MockAssignee[] };
 
 /**
  * State of the fake API. `session` stands for a valid refresh-token cookie: while it
@@ -155,6 +165,55 @@ const listEntry = ({ memo, role }: MockMemo): MemoOnUser => ({
   role,
   memo,
 });
+
+/** Everyone the fake API knows: the signed-in user and the others. */
+const knownUser = (uuid: string): UserSummary => {
+  const found = [mockApi.user, ...otherUsers].find((u) => u.uuid === uuid);
+  return found ?? { uuid, username: 'unknown', displayName: null };
+};
+
+/**
+ * Everyone a memo is assigned to, like `GET /memos/{memoUuid}/assignments`: its author,
+ * the signed-in user (assigned by the author) and the other assignees.
+ */
+const assignmentsOf = ({ memo, role, assignees }: MockMemo): MemoAssignment[] => {
+  const me = mockApi.user.uuid;
+  const rows: MockAssignee[] = [];
+  if (memo.authorUuid !== me && !assignees.some((a) => a.userUuid === memo.authorUuid)) {
+    rows.push({ userUuid: memo.authorUuid, role: 'ADMIN', assignedByUuid: memo.authorUuid });
+  }
+  rows.push({ userUuid: me, role, assignedByUuid: memo.authorUuid });
+  rows.push(...assignees);
+  return rows.map(({ userUuid, role, assignedByUuid = me }) => {
+    const user = knownUser(userUuid);
+    const by = knownUser(assignedByUuid);
+    return {
+      userUuid,
+      username: user.username,
+      displayName: user.displayName ?? null,
+      role,
+      assignedAt: memo.createdAt,
+      assignedByUuid,
+      assignedByUsername: by.username,
+      assignedByDisplayName: by.displayName ?? null,
+    };
+  });
+};
+
+const ROLE_ORDER: Role[] = ['USER', 'MOD', 'ADMIN'];
+
+/** Like the API: who may remove an assignment other than the author's. */
+const mayRemove = (myRole: Role, target: MemoAssignment) => {
+  const me = mockApi.user.uuid;
+  if (target.userUuid === me) return true;
+  if (
+    target.assignedByUuid === me &&
+    ROLE_ORDER.indexOf(myRole) >= ROLE_ORDER.indexOf(target.role)
+  ) {
+    return true;
+  }
+  return myRole === 'ADMIN' || (myRole === 'MOD' && target.role === 'USER');
+};
 
 /** Handlers for every endpoint the app calls, behaving like the real API. */
 export const handlers = [
@@ -279,6 +338,39 @@ export const handlers = [
       role,
     };
     return HttpResponse.json(assigned, { status: 201 });
+  }),
+
+  http.get(api('/memos/:memoUuid/assignments'), ({ request, params }) => {
+    if (!isAuthorized(request)) return unauthorized();
+    const entry = findMemo(params.memoUuid);
+    return entry ? HttpResponse.json(assignmentsOf(entry)) : forbidden(NO_ACCESS);
+  }),
+
+  http.delete(api('/memos/:memoUuid/assignments/:userUuid'), ({ request, params }) => {
+    if (!isAuthorized(request)) return unauthorized();
+    const entry = findMemo(params.memoUuid);
+    if (!entry) return forbidden(NO_ACCESS);
+    const target = assignmentsOf(entry).find((a) => a.userUuid === params.userUuid);
+    if (!target) {
+      return HttpResponse.json(
+        { message: 'The user is not assigned to the memo' },
+        { status: 404 },
+      );
+    }
+    if (target.userUuid === entry.memo.authorUuid) {
+      return forbidden("The memo's author can't be removed from it");
+    }
+    if (!mayRemove(entry.role, target)) {
+      return forbidden(
+        "Only the memo's ADMINs, its MODs (for USERs) and whoever assigned the user, with a role at least as high, can remove this assignment",
+      );
+    }
+    if (target.userUuid === mockApi.user.uuid) {
+      mockApi.memos = mockApi.memos.filter((other) => other !== entry);
+    } else {
+      entry.assignees = entry.assignees.filter((a) => a.userUuid !== target.userUuid);
+    }
+    return new HttpResponse(null, { status: 204 });
   }),
 
   http.get(api('/tags'), ({ request }) => {
