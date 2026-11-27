@@ -5,8 +5,10 @@ import {
   createMemo,
   deleteMemo,
   getMemo,
+  listAssignments,
   listMemos,
   listTags,
+  removeAssignment,
   replaceMemoTags,
   updateMemo,
 } from '../memos';
@@ -173,6 +175,76 @@ describe('assignMemo', () => {
     await assignMemo(request);
 
     await expect(assignMemo(request)).rejects.toMatchObject({ status: 409 });
+  });
+});
+
+describe('listAssignments', () => {
+  it('returns everyone the memo is assigned to, with who assigned them', async () => {
+    const entry = seedMemo();
+    const bob = otherUsers[0];
+    entry.assignees.push({ userUuid: bob.uuid, role: 'MOD' });
+
+    expect(await listAssignments(entry.memo.uuid)).toEqual([
+      expect.objectContaining({ userUuid: testUser.uuid, username: 'alice', role: 'ADMIN' }),
+      expect.objectContaining({
+        userUuid: bob.uuid,
+        username: 'bob',
+        displayName: 'Bob Builder',
+        role: 'MOD',
+        assignedByUuid: testUser.uuid,
+        assignedByUsername: 'alice',
+        assignedByDisplayName: 'Alice Liddell',
+      }),
+    ]);
+  });
+
+  it('encodes the uuid', async () => {
+    const seen = capture('get', '/memos/:memoUuid/assignments', []);
+
+    await listAssignments('a/b');
+
+    expect(seen.url?.pathname).toBe('/memos/a%2Fb/assignments');
+  });
+
+  it('rejects with 403 for a memo the user cannot see', async () => {
+    await expect(listAssignments('00000000-0000-4000-8000-999999999999')).rejects.toMatchObject({
+      status: 403,
+    });
+  });
+});
+
+describe('removeAssignment', () => {
+  it('deletes the assignment, encoding both uuids', async () => {
+    let pathname: string | undefined;
+    server.use(
+      http.delete(api('/memos/:memoUuid/assignments/:userUuid'), ({ request }) => {
+        pathname = new URL(request.url).pathname;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    expect(await removeAssignment('a/b', 'c/d')).toBeUndefined();
+    expect(pathname).toBe('/memos/a%2Fb/assignments/c%2Fd');
+  });
+
+  it('removes the user from the memo', async () => {
+    const entry = seedMemo();
+    entry.assignees.push({ userUuid: otherUsers[0].uuid, role: 'USER' });
+
+    await removeAssignment(entry.memo.uuid, otherUsers[0].uuid);
+
+    expect(entry.assignees).toEqual([]);
+  });
+
+  it('rejects with 403 for the author, and 404 for a user who is not assigned', async () => {
+    const { memo } = seedMemo();
+
+    await expect(removeAssignment(memo.uuid, testUser.uuid)).rejects.toMatchObject({
+      status: 403,
+    });
+    await expect(removeAssignment(memo.uuid, otherUsers[0].uuid)).rejects.toMatchObject({
+      status: 404,
+    });
   });
 });
 

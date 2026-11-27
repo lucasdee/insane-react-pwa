@@ -1,4 +1,4 @@
-import type { Memo, Role } from '../api/types';
+import type { Memo, MemoAssignment, Role } from '../api/types';
 
 /** Whether the user with this uuid wrote the memo. */
 export const isAuthor = (memo: Memo, userUuid: string | undefined): boolean =>
@@ -23,6 +23,35 @@ export const assignableRoles = (role: Role): Role[] => {
 };
 
 export const canAssign = (role: Role): boolean => assignableRoles(role).length > 0;
+
+const ROLE_ORDER: Role[] = ['USER', 'MOD', 'ADMIN'];
+
+type RemoveCheck = {
+  /** The assignment to remove. */
+  assignment: Pick<MemoAssignment, 'userUuid' | 'assignedByUuid' | 'role'>;
+  memo: Memo;
+  /** The signed-in user's uuid and their role on the memo. */
+  userUuid: string | undefined;
+  role: Role;
+};
+
+/**
+ * Whether the user may remove an assignment to a memo. Nobody may remove the author's.
+ * Anyone may remove their own (leave the memo), and ones they made if their role is at
+ * least as high as the assignee's. ADMINs may remove any, MODs those with the USER role.
+ */
+export const canRemoveAssignment = ({ assignment, memo, userUuid, role }: RemoveCheck): boolean => {
+  if (userUuid === undefined || assignment.userUuid === memo.authorUuid) return false;
+  if (assignment.userUuid === userUuid) return true;
+  if (
+    assignment.assignedByUuid === userUuid &&
+    ROLE_ORDER.indexOf(role) >= ROLE_ORDER.indexOf(assignment.role)
+  ) {
+    return true;
+  }
+  if (role === 'ADMIN') return true;
+  return role === 'MOD' && assignment.role === 'USER';
+};
 
 /** What each role on a memo allows, for the assign dialog. */
 export const roleDescriptions: Record<Role, string> = {

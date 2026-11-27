@@ -6,6 +6,7 @@ export type {
   AuthResponse,
   LoginRequest,
   Memo,
+  MemoAssignment,
   MemoCreateRequest,
   MemoOnUser,
   MemoOnUserCreateRequest,

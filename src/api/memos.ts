@@ -1,6 +1,7 @@
 import { authFetch } from './session';
 import type {
   Memo,
+  MemoAssignment,
   MemoCreateRequest,
   MemoListQuery,
   MemoOnUser,
@@ -43,6 +44,19 @@ export const replaceMemoTags = (memoUuid: string, tags: string[]) =>
 /** Assigns a memo to another user. MODs can assign USER; ADMINs any role. */
 export const assignMemo = (body: MemoOnUserCreateRequest) =>
   authFetch<MemoOnUser>('/memos/assign', { method: 'POST', body });
+
+/** Everyone a memo is assigned to, oldest assignment first. */
+export const listAssignments = (memoUuid: string) =>
+  authFetch<MemoAssignment[]>(`${memoPath(memoUuid)}/assignments`);
+
+/**
+ * Removes a user's assignment to a memo; removing your own leaves the memo. See
+ * `canRemoveAssignment` for who may. The author's assignment can't be removed.
+ */
+export const removeAssignment = (memoUuid: string, userUuid: string) =>
+  authFetch<void>(`${memoPath(memoUuid)}/assignments/${encodeURIComponent(userUuid)}`, {
+    method: 'DELETE',
+  });
 
 /** The tags on the signed-in user's memos, sorted by name, with how many memos carry each. */
 export const listTags = () => authFetch<TagCount[]>('/tags');

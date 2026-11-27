@@ -15,6 +15,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import AuthorChip from '../components/memos/AuthorChip';
 import DeleteMemoDialog from '../components/memos/DeleteMemoDialog';
+import MemoAssignees from '../components/memos/MemoAssignees';
 import MemoForm from '../components/memos/MemoForm';
 import { useMemoQuery, useUpdateMemo } from '../hooks/useMemos';
 import { useAuth } from '../auth/useAuth';
@@ -27,8 +28,8 @@ import type { MemosPageState } from './MemosPage';
 
 /**
  * One memo: an edit form for its author, MODs and ADMINs, read-only for everyone
- * else, and a Delete button for its author and ADMINs. Returns to the list after
- * saving or deleting.
+ * else, and a Delete button for its author and ADMINs. Below it, who the memo is
+ * shared with. Returns to the list after saving, deleting or leaving the memo.
  */
 const MemoEditorPage: FC = () => {
   const { memoUuid = '' } = useParams();
@@ -89,67 +90,72 @@ const MemoDetails: FC<{ item: MemoListItem }> = ({ item }) => {
   };
 
   return (
-    <Paper sx={{ p: { xs: 3, sm: 4 } }}>
-      <Stack direction='row' spacing={2} sx={{ justifyContent: 'space-between' }}>
-        <Typography variant='h5' component='h1' gutterBottom sx={{ wordBreak: 'break-word' }}>
-          {editable ? 'Edit memo' : memo.title}
-        </Typography>
-        {deletable && (
-          <Button
-            color='error'
-            startIcon={<DeleteOutlinedIcon />}
-            onClick={() => setConfirmingDelete(true)}
-            sx={{ flexShrink: 0, alignSelf: 'flex-start' }}
-          >
-            Delete
-          </Button>
-        )}
-      </Stack>
-      <DeleteMemoDialog
-        memo={confirmingDelete ? memo : null}
-        onClose={() => setConfirmingDelete(false)}
-        onDeleted={(deleted) => backToList(`Deleted “${deleted.title}”`)}
-      />
-      <Stack direction='row' sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 3 }}>
-        <Typography variant='body2' color='text.secondary'>
-          {formatDate(memo.createdAt)}
-        </Typography>
-        <AuthorChip memo={memo} currentUserUuid={user?.uuid} />
-        <Chip label={`Your role: ${role}`} size='small' />
-      </Stack>
-
-      {editable ? (
-        <MemoForm
-          initialValues={{ title: memo.title, content: memo.content, tags: memo.tags }}
-          submitLabel='Save changes'
-          onSubmit={save}
-          cancelTo='/memos'
-        />
-      ) : (
-        <>
-          <Alert severity='info' sx={{ mb: 2 }}>
-            You can read this memo. Only its author, MODs and ADMINs can edit it.
-          </Alert>
-          <Typography sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-            {memo.content}
+    <>
+      <Paper sx={{ p: { xs: 3, sm: 4 } }}>
+        <Stack direction='row' spacing={2} sx={{ justifyContent: 'space-between' }}>
+          <Typography variant='h5' component='h1' gutterBottom sx={{ wordBreak: 'break-word' }}>
+            {editable ? 'Edit memo' : memo.title}
           </Typography>
-          {memo.tags.length > 0 && (
-            <Stack
-              component='ul'
-              aria-label='Tags'
-              direction='row'
-              sx={{ flexWrap: 'wrap', gap: 1, mt: 2, p: 0, listStyle: 'none' }}
+          {deletable && (
+            <Button
+              color='error'
+              startIcon={<DeleteOutlinedIcon />}
+              onClick={() => setConfirmingDelete(true)}
+              sx={{ flexShrink: 0, alignSelf: 'flex-start' }}
             >
-              {memo.tags.map((tag) => (
-                <li key={tag}>
-                  <Chip label={tag} size='small' variant='outlined' />
-                </li>
-              ))}
-            </Stack>
+              Delete
+            </Button>
           )}
-        </>
-      )}
-    </Paper>
+        </Stack>
+        <DeleteMemoDialog
+          memo={confirmingDelete ? memo : null}
+          onClose={() => setConfirmingDelete(false)}
+          onDeleted={(deleted) => backToList(`Deleted “${deleted.title}”`)}
+        />
+        <Stack direction='row' sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+          <Typography variant='body2' color='text.secondary'>
+            {formatDate(memo.createdAt)}
+          </Typography>
+          <AuthorChip memo={memo} currentUserUuid={user?.uuid} />
+          <Chip label={`Your role: ${role}`} size='small' />
+        </Stack>
+
+        {editable ? (
+          <MemoForm
+            initialValues={{ title: memo.title, content: memo.content, tags: memo.tags }}
+            submitLabel='Save changes'
+            onSubmit={save}
+            cancelTo='/memos'
+          />
+        ) : (
+          <>
+            <Alert severity='info' sx={{ mb: 2 }}>
+              You can read this memo. Only its author, MODs and ADMINs can edit it.
+            </Alert>
+            <Typography sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {memo.content}
+            </Typography>
+            {memo.tags.length > 0 && (
+              <Stack
+                component='ul'
+                aria-label='Tags'
+                direction='row'
+                sx={{ flexWrap: 'wrap', gap: 1, mt: 2, p: 0, listStyle: 'none' }}
+              >
+                {memo.tags.map((tag) => (
+                  <li key={tag}>
+                    <Chip label={tag} size='small' variant='outlined' />
+                  </li>
+                ))}
+              </Stack>
+            )}
+          </>
+        )}
+      </Paper>
+      <Paper sx={{ p: { xs: 3, sm: 4 }, mt: 3 }}>
+        <MemoAssignees item={item} onLeft={(left) => backToList(`You left “${left.title}”`)} />
+      </Paper>
+    </>
   );
 };
 

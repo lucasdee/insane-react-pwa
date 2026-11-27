@@ -43,7 +43,7 @@ npm run format:check
 ## Features
 
 - Home screen, registration, login and a profile page, with routes only signed-in users can open
-- Memos: list the memos assigned to you, each showing whether you wrote it or who did, create memos, open a memo to edit its title, content and tags, delete memos (after confirming), and assign memos to other users (searched by name). What you can do with a memo depends on whether you wrote it and on your role on it: its author can edit and delete it, its ADMINs can edit and delete it and assign any role, its MODs can edit it and assign USERs, its USERs can read it
+- Memos: list the memos assigned to you, each showing whether you wrote it or who did, create memos, open a memo to edit its title, content and tags, delete memos (after confirming), and assign memos to other users (searched by name). Each memo's page shows who it is shared with, with their role and who assigned them, and lets you remove assignees (after confirming) or leave the memo. What you can do with a memo depends on whether you wrote it and on your role on it: its author can edit and delete it, its ADMINs can edit and delete it, assign any role and remove anyone, its MODs can edit it, assign USERs and remove USERs, its USERs can read it. Anyone can leave a memo except its author, who can't be removed, and anyone can remove assignments they made if their role is at least as high as the assignee's
 - React + TypeScript powered by Vite
 - Material UI (MUI) for UI components
 - Progressive Web App support via `vite-plugin-pwa`
@@ -85,8 +85,8 @@ Open DevTools → Application to inspect the registered service worker and cache
 - `src/App.tsx` — routes
 - `src/api/` — API client, session handling and generated types
 - `src/auth/` — auth state (`AuthProvider`, `useAuth`) and route guards
-- `src/pages/` — home, login, register, profile, memo list and new memo pages
-- `src/components/memos/` — memo card, tag input, user search, edit tags and assign dialogs
+- `src/pages/` — home, login, register, profile, memo list, new memo and memo editor pages
+- `src/components/memos/` — memo card, tag input, user search, assignee list, and the edit tags, assign, delete and remove-assignee dialogs
 - `src/hooks/useMemos.ts`, `src/hooks/useUserSearch.ts` — React Query hooks for memos, tags and users
 - `src/utils/permissions.ts` — what each role on a memo allows
 - `src/utils/validation.ts` — form and tag checks mirroring the API's rules

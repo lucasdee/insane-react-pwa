@@ -247,6 +247,28 @@ describe('MemoEditorPage', () => {
     expect(mockApi.memos).toHaveLength(1);
   });
 
+  it('shows who the memo is shared with below it', async () => {
+    const entry = seedMemo({ title: 'Plan', role: 'USER', ...authoredBy(bob) });
+    renderEditor(entry.memo.uuid);
+
+    const section = await screen.findByRole('region', { name: 'Shared with' });
+    const list = await within(section).findByRole('list', { name: 'Assignees' });
+    expect(within(list).getByText('Bob Builder (@bob)')).toBeInTheDocument();
+    expect(await within(list).findByText('Alice Liddell (@alice)')).toBeInTheDocument();
+  });
+
+  it('returns to the list after leaving the memo', async () => {
+    const entry = seedMemo({ title: 'Plan', role: 'USER', ...authoredBy(bob) });
+    const { user } = renderEditor(entry.memo.uuid);
+
+    await user.click(await screen.findByRole('button', { name: 'Leave' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Leave' }));
+
+    expect(await screen.findByText('You left “Plan”')).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/memos$/);
+    expect(await screen.findByText('No memos yet')).toBeInTheDocument();
+  });
+
   it('links back to the list', async () => {
     const entry = seedMemo({ title: 'Groceries' });
     const { user } = await openEditor(entry);
