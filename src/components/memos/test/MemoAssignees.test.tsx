@@ -171,6 +171,25 @@ describe('MemoAssignees', () => {
     expect(mockApi.memos).toEqual([]);
   });
 
+  it('does not reload the assignees of a memo the user left', async () => {
+    const entry = seedMemo({ title: 'Plan', role: 'USER', ...authoredBy(bob) });
+    const { user, onLeft } = renderAssignees(entry);
+    await rows();
+    const loads: string[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (request.method === 'GET' && request.url.endsWith('/assignments')) loads.push(request.url);
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Leave' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Leave' }));
+    await waitFor(() => expect(onLeft).toHaveBeenCalled());
+    // Give a refetch, if one was triggered, the chance to start.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    server.events.removeAllListeners();
+    expect(loads).toEqual([]);
+  });
+
   it('says so when the assignee was already removed, and refreshes the list', async () => {
     const entry = seedMemo();
     entry.assignees.push({ userUuid: bob.uuid, role: 'USER' });
