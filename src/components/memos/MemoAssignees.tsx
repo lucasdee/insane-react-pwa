@@ -152,12 +152,15 @@ const MemoAssignees: FC<Props> = ({ item, onLeft }) => {
         leaving={leaving}
         onClose={() => setRemoving(null)}
         onRemoved={(removed) => {
-          setRemoving(null);
           if (removed.userUuid === user?.uuid) {
+            // Leaving dropped the memo's queries, and the page is about to go. Re-rendering
+            // first (e.g. to close the dialog) would make the list fetch its assignees
+            // again, which the user may no longer see, so leave the dialog to the page.
             onLeft(memo);
-          } else {
-            setNotice(`Removed ${assigneeLabel(removed)}`);
+            return;
           }
+          setRemoving(null);
+          setNotice(`Removed ${assigneeLabel(removed)}`);
         }}
       />
     </Box>
