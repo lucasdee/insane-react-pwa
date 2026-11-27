@@ -80,15 +80,41 @@ describe('MemosPage', () => {
     expect(within(card('From Bob')).queryByText('You’re the author')).not.toBeInTheDocument();
   });
 
-  it('only offers the actions each memo’s role allows', async () => {
+  it('only offers the actions each memo’s role and authorship allow', async () => {
     seedMemo({ title: 'Mine', role: 'ADMIN' });
-    seedMemo({ title: 'Shared with me', role: 'USER' });
+    seedMemo({ title: 'Shared with me', role: 'USER', ...authoredBy(otherUsers[0]) });
     renderMemos();
     await screen.findByRole('article', { name: 'Mine' });
 
+    expect(within(card('Mine')).getByRole('link', { name: 'Edit' })).toBeInTheDocument();
     expect(within(card('Mine')).getByRole('button', { name: 'Edit tags' })).toBeInTheDocument();
     expect(within(card('Mine')).getByRole('button', { name: 'Assign' })).toBeInTheDocument();
     expect(within(card('Shared with me')).queryByRole('button')).not.toBeInTheDocument();
+    expect(
+      within(card('Shared with me')).queryByRole('link', { name: 'Edit' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('opens a memo from its title', async () => {
+    seedMemo({ title: 'Shared with me', role: 'USER', ...authoredBy(otherUsers[0]) });
+    const { user } = renderMemos();
+    await screen.findByRole('article', { name: 'Shared with me' });
+
+    await user.click(within(card('Shared with me')).getByRole('link', { name: 'Shared with me' }));
+
+    expect(await screen.findByRole('heading', { name: 'Shared with me' })).toBeInTheDocument();
+    expect(screen.getByText(/Only its author, MODs and ADMINs can edit it/)).toBeInTheDocument();
+  });
+
+  it('opens the editor from Edit', async () => {
+    const entry = seedMemo({ title: 'Mine' });
+    const { user } = renderMemos();
+    await screen.findByRole('article', { name: 'Mine' });
+
+    await user.click(within(card('Mine')).getByRole('link', { name: 'Edit' }));
+
+    expect(await screen.findByRole('heading', { name: 'Edit memo' })).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent(`/memos/${entry.memo.uuid}`);
   });
 
   it('edits tags in a dialog and shows the saved tags', async () => {

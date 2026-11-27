@@ -4,7 +4,7 @@ import { ApiError, type ValidationDetail } from './errors';
 export type QueryValue = string | number | boolean | undefined | (string | number)[];
 
 export type RequestOptions = {
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   /** Sent as JSON. */
   body?: unknown;
   /** Arrays are repeated (`?tags=a&tags=b`); undefined values are left out. */

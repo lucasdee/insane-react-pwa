@@ -3,7 +3,7 @@ import { screen, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import EditTagsDialog from '../EditTagsDialog';
 import { server } from '../../../test/server';
-import { api, mockApi, seedMemo } from '../../../test/handlers';
+import { api, authoredBy, mockApi, otherUsers, seedMemo } from '../../../test/handlers';
 import { renderWithProviders } from '../../../test/renderWithProviders';
 import type { Memo } from '../../../api/types';
 
@@ -68,13 +68,13 @@ describe('EditTagsDialog', () => {
   });
 
   it('shows why the API refused, e.g. a 403', async () => {
-    const { memo } = seedMemo({ tags: ['home'], role: 'USER' });
+    const { memo } = seedMemo({ tags: ['home'], role: 'USER', ...authoredBy(otherUsers[0]) });
     const { user, onSaved } = renderDialog(memo);
 
     await user.click(save());
 
     expect(await within(dialog()).findByRole('alert')).toHaveTextContent(
-      "Only the memo's ADMINs and MODs can change its tags",
+      "Only the memo's author, ADMINs and MODs can change its tags",
     );
     expect(onSaved).not.toHaveBeenCalled();
   });

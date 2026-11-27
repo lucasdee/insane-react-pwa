@@ -1,9 +1,20 @@
 import type { FC } from 'react';
-import { Button, Card, CardActions, CardContent, Chip, Stack, Typography } from '@mui/material';
+import { Link as RouterLink } from 'react-router';
+import {
+  Button,
+  Card,
+  CardActions,
+  CardContent,
+  Chip,
+  Link,
+  Stack,
+  Typography,
+} from '@mui/material';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
 import PersonAddAlt1OutlinedIcon from '@mui/icons-material/PersonAddAlt1Outlined';
 import type { MemoListItem } from '../../api/types';
-import { canAssign, canEditTags } from '../../utils/permissions';
+import { canAssign, canEditMemo, isAuthor } from '../../utils/permissions';
 import { formatDate } from '../../utils/format';
 import AuthorChip from './AuthorChip';
 
@@ -19,7 +30,8 @@ type Props = {
 const MemoCard: FC<Props> = ({ item, currentUserUuid, onEditTags, onAssign }) => {
   const { memo, role } = item;
   const titleId = `memo-title-${memo.uuid}`;
-  const showEditTags = canEditTags(role);
+  const memoPath = `/memos/${encodeURIComponent(memo.uuid)}`;
+  const editable = canEditMemo(role, isAuthor(memo, currentUserUuid));
   const showAssign = canAssign(role);
 
   return (
@@ -27,7 +39,9 @@ const MemoCard: FC<Props> = ({ item, currentUserUuid, onEditTags, onAssign }) =>
       <CardContent>
         <Stack direction='row' spacing={1} sx={{ justifyContent: 'space-between', mb: 0.5 }}>
           <Typography id={titleId} variant='h6' component='h2' sx={{ wordBreak: 'break-word' }}>
-            {memo.title}
+            <Link component={RouterLink} to={memoPath} color='inherit' underline='hover'>
+              {memo.title}
+            </Link>
           </Typography>
           <Chip label={`Your role: ${role}`} size='small' sx={{ flexShrink: 0 }} />
         </Stack>
@@ -55,9 +69,19 @@ const MemoCard: FC<Props> = ({ item, currentUserUuid, onEditTags, onAssign }) =>
           </Stack>
         )}
       </CardContent>
-      {(showEditTags || showAssign) && (
+      {(editable || showAssign) && (
         <CardActions sx={{ px: 2, pb: 2 }}>
-          {showEditTags && (
+          {editable && (
+            <Button
+              size='small'
+              component={RouterLink}
+              to={memoPath}
+              startIcon={<EditOutlinedIcon />}
+            >
+              Edit
+            </Button>
+          )}
+          {editable && (
             <Button
               size='small'
               startIcon={<LocalOfferOutlinedIcon />}

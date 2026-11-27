@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   assignableRoles,
   canAssign,
-  canEditTags,
+  canEditMemo,
   isAuthor,
   roleDescriptions,
 } from '../permissions';
@@ -21,14 +21,24 @@ describe('isAuthor', () => {
 });
 
 describe('memo permissions', () => {
-  it.each<[Role, boolean, Role[]]>([
-    ['ADMIN', true, ['USER', 'MOD', 'ADMIN']],
-    ['MOD', true, ['USER']],
-    ['USER', false, []],
-  ])('%s: edit tags %s, assign %j', (role, editTags, roles) => {
-    expect(canEditTags(role)).toBe(editTags);
+  it.each<[Role, Role[]]>([
+    ['ADMIN', ['USER', 'MOD', 'ADMIN']],
+    ['MOD', ['USER']],
+    ['USER', []],
+  ])('%s can assign %j', (role, roles) => {
     expect(assignableRoles(role)).toEqual(roles);
     expect(canAssign(role)).toBe(roles.length > 0);
+  });
+
+  it.each<[Role, boolean, boolean]>([
+    ['ADMIN', false, true],
+    ['MOD', false, true],
+    ['USER', false, false],
+    ['ADMIN', true, true],
+    ['MOD', true, true],
+    ['USER', true, true],
+  ])('%s (author: %s) can edit: %s', (role, author, expected) => {
+    expect(canEditMemo(role, author)).toBe(expected);
   });
 
   it('describes every role', () => {

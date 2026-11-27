@@ -2,17 +2,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
+import { http, HttpResponse } from 'msw';
 import {
+  memoKey,
   memosKey,
   newestFirst,
   tagsKey,
   useAssignMemo,
   useCreateMemo,
+  useMemoQuery,
   useMemosQuery,
   useReplaceTags,
   useTagsQuery,
+  useUpdateMemo,
 } from '../useMemos';
-import { mockApi, otherUsers, seedMemo } from '../../test/handlers';
+import { api, mockApi, otherUsers, seedMemo } from '../../test/handlers';
+import { server } from '../../test/server';
 import { createTestQueryClient } from '../../test/renderWithProviders';
 import type { MemoOnUser } from '../../api/types';
 
@@ -72,6 +77,34 @@ describe('useMemosQuery', () => {
   });
 });
 
+describe('useMemoQuery', () => {
+  it('loads one memo with the user’s role on it', async () => {
+    const { memo } = seedMemo({ title: 'Groceries', role: 'MOD' });
+
+    const { result } = renderHook(() => useMemoQuery(memo.uuid), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toMatchObject({ role: 'MOD', memo });
+  });
+
+  it('is refetched along with the memo list', () => {
+    expect(memoKey('m-1').slice(0, memosKey.length)).toEqual(memosKey);
+  });
+
+  it('fails if the response has no memo', async () => {
+    const { memo } = seedMemo();
+    server.use(
+      http.get(api('/memos/:memoUuid'), () =>
+        HttpResponse.json({ memoUuid: memo.uuid, role: 'USER' }),
+      ),
+    );
+
+    const { result } = renderHook(() => useMemoQuery(memo.uuid), { wrapper });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+});
+
 describe('useTagsQuery', () => {
   it('loads the tag counts', async () => {
     seedMemo({ tags: ['home'] });
@@ -90,6 +123,20 @@ describe('mutations', () => {
     await act(() => result.current.mutateAsync({ title: 'New', content: 'Body', tags: ['x'] }));
 
     expect(mockApi.memos.map((m) => m.memo.title)).toEqual(['New']);
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: memosKey });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: tagsKey });
+  });
+
+  it('useUpdateMemo saves the changes and refetches memos and tags', async () => {
+    const { memo } = seedMemo({ title: 'Old' });
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    const { result } = renderHook(() => useUpdateMemo(), { wrapper });
+
+    const saved = await act(() =>
+      result.current.mutateAsync({ memoUuid: memo.uuid, changes: { title: 'New' } }),
+    );
+
+    expect(saved.title).toBe('New');
     expect(invalidate).toHaveBeenCalledWith({ queryKey: memosKey });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: tagsKey });
   });

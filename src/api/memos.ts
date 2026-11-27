@@ -5,8 +5,11 @@ import type {
   MemoListQuery,
   MemoOnUser,
   MemoOnUserCreateRequest,
+  MemoUpdateRequest,
   TagCount,
 } from './types';
+
+const memoPath = (memoUuid: string) => `/memos/${encodeURIComponent(memoUuid)}`;
 
 /** The memos assigned to the signed-in user (including their own), with their role on each. */
 export const listMemos = (query: MemoListQuery = {}) =>
@@ -16,12 +19,19 @@ export const listMemos = (query: MemoListQuery = {}) =>
 export const createMemo = (body: MemoCreateRequest) =>
   authFetch<Memo>('/memos/create', { method: 'POST', body });
 
-/** Replaces all of a memo's tags. Needs the MOD or ADMIN role on the memo. */
+/** The signed-in user's assignment to a memo, with the memo. */
+export const getMemo = (memoUuid: string) => authFetch<MemoOnUser>(memoPath(memoUuid));
+
+/**
+ * Changes a memo's title, content and tags; fields left out stay. Only its author, MODs
+ * and ADMINs can do this.
+ */
+export const updateMemo = (memoUuid: string, body: MemoUpdateRequest) =>
+  authFetch<Memo>(memoPath(memoUuid), { method: 'PATCH', body });
+
+/** Replaces all of a memo's tags. Only its author, MODs and ADMINs can do this. */
 export const replaceMemoTags = (memoUuid: string, tags: string[]) =>
-  authFetch<Memo>(`/memos/${encodeURIComponent(memoUuid)}/tags`, {
-    method: 'PUT',
-    body: { tags },
-  });
+  authFetch<Memo>(`${memoPath(memoUuid)}/tags`, { method: 'PUT', body: { tags } });
 
 /** Assigns a memo to another user. MODs can assign USER; ADMINs any role. */
 export const assignMemo = (body: MemoOnUserCreateRequest) =>

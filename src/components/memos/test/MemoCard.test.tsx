@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
 import MemoCard from '../MemoCard';
 import type { MemoListItem, Role } from '../../../api/types';
 
@@ -26,12 +27,14 @@ const renderCard = (memo: MemoListItem, currentUserUuid = 'u-1') => {
   const onEditTags = vi.fn();
   const onAssign = vi.fn();
   render(
-    <MemoCard
-      item={memo}
-      currentUserUuid={currentUserUuid}
-      onEditTags={onEditTags}
-      onAssign={onAssign}
-    />,
+    <MemoryRouter>
+      <MemoCard
+        item={memo}
+        currentUserUuid={currentUserUuid}
+        onEditTags={onEditTags}
+        onAssign={onAssign}
+      />
+    </MemoryRouter>,
   );
   return { onEditTags, onAssign, card: screen.getByRole('article', { name: 'Groceries' }) };
 };
@@ -72,15 +75,35 @@ describe('MemoCard', () => {
     expect(within(card).queryByRole('list', { name: 'Tags' })).not.toBeInTheDocument();
   });
 
-  it.each<[Role, boolean, boolean]>([
-    ['ADMIN', true, true],
-    ['MOD', true, true],
-    ['USER', false, false],
-  ])('a memo %s sees Edit tags: %s, Assign: %s', (role, editTags, assign) => {
-    const { card } = renderCard(item(role));
+  it('links the title to the memo', () => {
+    const { card } = renderCard(item('USER'), 'u-2');
 
-    expect(!!within(card).queryByRole('button', { name: 'Edit tags' })).toBe(editTags);
-    expect(!!within(card).queryByRole('button', { name: 'Assign' })).toBe(assign);
+    expect(within(card).getByRole('link', { name: 'Groceries' })).toHaveAttribute(
+      'href',
+      '/memos/m-1',
+    );
+  });
+
+  it.each<[Role, boolean, boolean, boolean]>([
+    ['ADMIN', false, true, true],
+    ['MOD', false, true, true],
+    ['USER', false, false, false],
+    ['USER', true, true, false],
+  ])(
+    'a memo %s (author: %s) sees Edit and Edit tags: %s, Assign: %s',
+    (role, author, edit, assign) => {
+      const { card } = renderCard(item(role), author ? 'u-1' : 'u-2');
+
+      expect(!!within(card).queryByRole('link', { name: 'Edit' })).toBe(edit);
+      expect(!!within(card).queryByRole('button', { name: 'Edit tags' })).toBe(edit);
+      expect(!!within(card).queryByRole('button', { name: 'Assign' })).toBe(assign);
+    },
+  );
+
+  it('links Edit to the memo', () => {
+    const { card } = renderCard(item('MOD'), 'u-2');
+
+    expect(within(card).getByRole('link', { name: 'Edit' })).toHaveAttribute('href', '/memos/m-1');
   });
 
   it('calls back with the memo from its actions', async () => {

@@ -1,15 +1,27 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { http, HttpResponse, type JsonBodyType } from 'msw';
-import { assignMemo, createMemo, listMemos, listTags, replaceMemoTags } from '../memos';
+import {
+  assignMemo,
+  createMemo,
+  getMemo,
+  listMemos,
+  listTags,
+  replaceMemoTags,
+  updateMemo,
+} from '../memos';
 import { server } from '../../test/server';
-import { api, mockApi, otherUsers, seedMemo, testUser } from '../../test/handlers';
+import { api, authoredBy, mockApi, otherUsers, seedMemo, testUser } from '../../test/handlers';
 
 beforeEach(() => {
   mockApi.session = true;
 });
 
 /** Captures the next request to `method path`, answering with `body`. */
-const capture = (method: 'get' | 'post' | 'put', path: string, body: JsonBodyType = {}) => {
+const capture = (
+  method: 'get' | 'post' | 'put' | 'patch',
+  path: string,
+  body: JsonBodyType = {},
+) => {
   const seen: { url?: URL; body?: unknown } = {};
   server.use(
     http[method](api(path), async ({ request }) => {
@@ -47,6 +59,53 @@ describe('createMemo', () => {
 
     expect(memo).toMatchObject({ title: 'Plan', content: 'Do things', tags: ['home'] });
     expect(mockApi.memos).toHaveLength(1);
+  });
+});
+
+describe('getMemo', () => {
+  it('returns the user’s assignment with the memo', async () => {
+    const { memo } = seedMemo({ title: 'Groceries', role: 'MOD' });
+
+    expect(await getMemo(memo.uuid)).toMatchObject({ memoUuid: memo.uuid, role: 'MOD', memo });
+  });
+
+  it('encodes the uuid', async () => {
+    const seen = capture('get', '/memos/:memoUuid', {});
+
+    await getMemo('a/b');
+
+    expect(seen.url?.pathname).toBe('/memos/a%2Fb');
+  });
+
+  it('rejects with 403 for a memo the user cannot see', async () => {
+    await expect(getMemo('missing')).rejects.toMatchObject({ status: 403 });
+  });
+});
+
+describe('updateMemo', () => {
+  it('patches only the given fields, encoding the uuid', async () => {
+    const seen = capture('patch', '/memos/:memoUuid', { uuid: 'a/b' });
+
+    await updateMemo('a/b', { title: 'New' });
+
+    expect(seen.url?.pathname).toBe('/memos/a%2Fb');
+    expect(seen.body).toEqual({ title: 'New' });
+  });
+
+  it('returns the updated memo', async () => {
+    const { memo } = seedMemo({ title: 'Old', content: 'Same', tags: ['old'] });
+
+    expect(await updateMemo(memo.uuid, { title: 'New', tags: ['B', 'a'] })).toMatchObject({
+      title: 'New',
+      content: 'Same',
+      tags: ['a', 'b'],
+    });
+  });
+
+  it('rejects with 403 when the user may not edit the memo', async () => {
+    const { memo } = seedMemo({ role: 'USER', ...authoredBy(otherUsers[0]) });
+
+    await expect(updateMemo(memo.uuid, { title: 'New' })).rejects.toMatchObject({ status: 403 });
   });
 });
 
