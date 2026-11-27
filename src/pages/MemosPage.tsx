@@ -16,6 +16,7 @@ import MemoCard from '../components/memos/MemoCard';
 import EditTagsDialog from '../components/memos/EditTagsDialog';
 import AssignMemoDialog from '../components/memos/AssignMemoDialog';
 import { useMemosQuery } from '../hooks/useMemos';
+import { useAuth } from '../auth/useAuth';
 import { errorMessage } from '../api/errors';
 import { userLabel } from '../utils/format';
 import type { MemoListItem } from '../api/types';
@@ -26,6 +27,7 @@ export type MemosPageState = { notice?: string };
 /** The memos assigned to the signed-in user, newest first. */
 const MemosPage: FC = () => {
   const { data: items, isPending, isError, error, refetch, isRefetching } = useMemosQuery();
+  const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [editing, setEditing] = useState<MemoListItem | null>(null);
@@ -95,6 +97,7 @@ const MemosPage: FC = () => {
             <MemoCard
               key={item.memo.uuid}
               item={item}
+              currentUserUuid={user?.uuid}
               onEditTags={setEditing}
               onAssign={setAssigning}
             />

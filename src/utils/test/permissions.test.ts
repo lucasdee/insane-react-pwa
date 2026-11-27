@@ -1,6 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { assignableRoles, canAssign, canEditTags, roleDescriptions } from '../permissions';
-import type { Role } from '../../api/types';
+import {
+  assignableRoles,
+  canAssign,
+  canEditTags,
+  isAuthor,
+  roleDescriptions,
+} from '../permissions';
+import type { Memo, Role } from '../../api/types';
+
+describe('isAuthor', () => {
+  const memo = { authorUuid: 'u-1' } as Memo;
+
+  it.each<[string | undefined, boolean]>([
+    ['u-1', true],
+    ['u-2', false],
+    [undefined, false],
+  ])('user %s: %s', (userUuid, expected) => {
+    expect(isAuthor(memo, userUuid)).toBe(expected);
+  });
+});
 
 describe('memo permissions', () => {
   it.each<[Role, boolean, Role[]]>([

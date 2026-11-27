@@ -43,7 +43,7 @@ npm run format:check
 ## Features
 
 - Home screen, registration, login and a profile page, with routes only signed-in users can open
-- Memos: list the memos assigned to you, create memos, assign them to other users (searched by name) and edit their tags. What you can do with a memo depends on your role on it: its ADMINs can assign any role and edit tags, its MODs can assign USERs and edit tags, its USERs can read it
+- Memos: list the memos assigned to you, each showing whether you wrote it or who did, create memos, assign them to other users (searched by name) and edit their tags. What you can do with a memo depends on your role on it: its ADMINs can assign any role and edit tags, its MODs can assign USERs and edit tags, its USERs can read it
 - React + TypeScript powered by Vite
 - Material UI (MUI) for UI components
 - Progressive Web App support via `vite-plugin-pwa`

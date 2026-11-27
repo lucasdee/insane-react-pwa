@@ -34,7 +34,16 @@ const entry = (uuid: string, createdAt: string, withMemo = true): MemoOnUser => 
   assignedAt: createdAt,
   role: 'USER',
   memo: withMemo
-    ? { uuid, title: uuid, content: 'c', authorUuid: 'u', createdAt, tags: [] }
+    ? {
+        uuid,
+        title: uuid,
+        content: 'c',
+        authorUuid: 'u',
+        authorUsername: 'u',
+        authorDisplayName: null,
+        createdAt,
+        tags: [],
+      }
     : undefined,
 });
 

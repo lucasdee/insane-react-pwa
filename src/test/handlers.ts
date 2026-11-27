@@ -63,9 +63,32 @@ export const mockApi = {
 
 let memoCount = 0;
 
-/** Adds a memo to the signed-in user's list. */
+/** The author fields of a memo written by `user`. */
+export const authoredBy = (
+  user: UserSummary,
+): Pick<Memo, 'authorUuid' | 'authorUsername' | 'authorDisplayName'> => ({
+  authorUuid: user.uuid,
+  authorUsername: user.username,
+  authorDisplayName: user.displayName ?? null,
+});
+
+/**
+ * Adds a memo to the signed-in user's list. It is theirs unless the author fields
+ * say otherwise, e.g. `seedMemo({ ...authoredBy(otherUsers[0]), role: 'USER' })`.
+ */
 export const seedMemo = (
-  overrides: Partial<Pick<Memo, 'title' | 'content' | 'tags' | 'createdAt'>> & { role?: Role } = {},
+  overrides: Partial<
+    Pick<
+      Memo,
+      | 'title'
+      | 'content'
+      | 'tags'
+      | 'createdAt'
+      | 'authorUuid'
+      | 'authorUsername'
+      | 'authorDisplayName'
+    >
+  > & { role?: Role } = {},
 ): MockMemo => {
   const n = ++memoCount;
   const { role = 'ADMIN', ...memo } = overrides;
@@ -74,7 +97,7 @@ export const seedMemo = (
       uuid: `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`,
       title: `Memo ${n}`,
       content: `Content of memo ${n}`,
-      authorUuid: testUser.uuid,
+      ...authoredBy(mockApi.user),
       createdAt: new Date(Date.UTC(2026, 0, n)).toISOString(),
       tags: [],
       ...memo,
