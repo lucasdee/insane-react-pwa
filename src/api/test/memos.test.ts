@@ -3,6 +3,7 @@ import { http, HttpResponse, type JsonBodyType } from 'msw';
 import {
   assignMemo,
   createMemo,
+  deleteMemo,
   getMemo,
   listMemos,
   listTags,
@@ -106,6 +107,36 @@ describe('updateMemo', () => {
     const { memo } = seedMemo({ role: 'USER', ...authoredBy(otherUsers[0]) });
 
     await expect(updateMemo(memo.uuid, { title: 'New' })).rejects.toMatchObject({ status: 403 });
+  });
+});
+
+describe('deleteMemo', () => {
+  it('deletes the memo, encoding its uuid', async () => {
+    let pathname: string | undefined;
+    server.use(
+      http.delete(api('/memos/:memoUuid'), ({ request }) => {
+        pathname = new URL(request.url).pathname;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    expect(await deleteMemo('a/b')).toBeUndefined();
+    expect(pathname).toBe('/memos/a%2Fb');
+  });
+
+  it('removes the memo', async () => {
+    const { memo } = seedMemo();
+
+    await deleteMemo(memo.uuid);
+
+    expect(mockApi.memos).toEqual([]);
+  });
+
+  it('rejects with 403 when the user may not delete the memo', async () => {
+    const { memo } = seedMemo({ role: 'MOD', ...authoredBy(otherUsers[0]) });
+
+    await expect(deleteMemo(memo.uuid)).rejects.toMatchObject({ status: 403 });
+    expect(mockApi.memos).toHaveLength(1);
   });
 });
 

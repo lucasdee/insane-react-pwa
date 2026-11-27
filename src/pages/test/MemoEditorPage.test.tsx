@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { AppRoutes } from '../../App';
 import { server } from '../../test/server';
@@ -197,6 +197,54 @@ describe('MemoEditorPage', () => {
     expect(await screen.findByRole('heading', { name: 'My memos' })).toBeInTheDocument();
     expect(bodies).toEqual([]);
     expect(entry.memo.title).toBe('Groceries');
+  });
+
+  it('lets the author delete the memo after confirming, then returns to the list', async () => {
+    const entry = seedMemo({ title: 'Groceries' });
+    const { user } = await openEditor(entry);
+
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Delete “Groceries”?')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+
+    expect(await screen.findByText('Deleted “Groceries”')).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/memos$/);
+    expect(await screen.findByText('No memos yet')).toBeInTheDocument();
+    expect(mockApi.memos).toEqual([]);
+  });
+
+  it('lets an ADMIN delete someone else’s memo', async () => {
+    const entry = seedMemo({ title: 'Plan', role: 'ADMIN', ...authoredBy(bob) });
+    const { user } = await openEditor(entry);
+
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
+
+    expect(await screen.findByText('Deleted “Plan”')).toBeInTheDocument();
+  });
+
+  it.each(['MOD', 'USER'] as const)(
+    'offers a %s no Delete on someone else’s memo',
+    async (role) => {
+      const entry = seedMemo({ title: 'Plan', role, ...authoredBy(bob) });
+      renderEditor(entry.memo.uuid);
+      await screen.findByText('By Bob Builder (@bob)');
+
+      expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    },
+  );
+
+  it('stays on the memo when deleting is cancelled', async () => {
+    const entry = seedMemo({ title: 'Groceries' });
+    const { user } = await openEditor(entry);
+
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByLabelText('Title')).toHaveValue('Groceries');
+    expect(mockApi.memos).toHaveLength(1);
   });
 
   it('links back to the list', async () => {

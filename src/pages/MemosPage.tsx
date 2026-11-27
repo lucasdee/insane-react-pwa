@@ -15,6 +15,7 @@ import AddIcon from '@mui/icons-material/Add';
 import MemoCard from '../components/memos/MemoCard';
 import EditTagsDialog from '../components/memos/EditTagsDialog';
 import AssignMemoDialog from '../components/memos/AssignMemoDialog';
+import DeleteMemoDialog from '../components/memos/DeleteMemoDialog';
 import { useMemosQuery } from '../hooks/useMemos';
 import { useAuth } from '../auth/useAuth';
 import { errorMessage } from '../api/errors';
@@ -32,6 +33,7 @@ const MemosPage: FC = () => {
   const navigate = useNavigate();
   const [editing, setEditing] = useState<MemoListItem | null>(null);
   const [assigning, setAssigning] = useState<MemoListItem | null>(null);
+  const [deleting, setDeleting] = useState<MemoListItem | null>(null);
   const stateNotice = (location.state as MemosPageState | null)?.notice;
   const [notice, setNotice] = useState<string | null>(stateNotice ?? null);
 
@@ -100,6 +102,7 @@ const MemosPage: FC = () => {
               currentUserUuid={user?.uuid}
               onEditTags={setEditing}
               onAssign={setAssigning}
+              onDelete={setDeleting}
             />
           ))}
         </Stack>
@@ -119,6 +122,14 @@ const MemosPage: FC = () => {
         onAssigned={(user, role) => {
           setAssigning(null);
           setNotice(`Assigned to ${userLabel(user)} as ${role}`);
+        }}
+      />
+      <DeleteMemoDialog
+        memo={deleting?.memo ?? null}
+        onClose={() => setDeleting(null)}
+        onDeleted={(memo) => {
+          setDeleting(null);
+          setNotice(`Deleted “${memo.title}”`);
         }}
       />
       <Snackbar

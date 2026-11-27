@@ -10,11 +10,12 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
+import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
 import PersonAddAlt1OutlinedIcon from '@mui/icons-material/PersonAddAlt1Outlined';
 import type { MemoListItem } from '../../api/types';
-import { canAssign, canEditMemo, isAuthor } from '../../utils/permissions';
+import { canAssign, canDeleteMemo, canEditMemo, isAuthor } from '../../utils/permissions';
 import { formatDate } from '../../utils/format';
 import AuthorChip from './AuthorChip';
 
@@ -24,14 +25,17 @@ type Props = {
   currentUserUuid: string | undefined;
   onEditTags: (item: MemoListItem) => void;
   onAssign: (item: MemoListItem) => void;
+  onDelete: (item: MemoListItem) => void;
 };
 
 /** One memo, with who wrote it and the actions the user's role on it allows. */
-const MemoCard: FC<Props> = ({ item, currentUserUuid, onEditTags, onAssign }) => {
+const MemoCard: FC<Props> = ({ item, currentUserUuid, onEditTags, onAssign, onDelete }) => {
   const { memo, role } = item;
   const titleId = `memo-title-${memo.uuid}`;
   const memoPath = `/memos/${encodeURIComponent(memo.uuid)}`;
-  const editable = canEditMemo(role, isAuthor(memo, currentUserUuid));
+  const author = isAuthor(memo, currentUserUuid);
+  const editable = canEditMemo(role, author);
+  const deletable = canDeleteMemo(role, author);
   const showAssign = canAssign(role);
 
   return (
@@ -69,7 +73,7 @@ const MemoCard: FC<Props> = ({ item, currentUserUuid, onEditTags, onAssign }) =>
           </Stack>
         )}
       </CardContent>
-      {(editable || showAssign) && (
+      {(editable || showAssign || deletable) && (
         <CardActions sx={{ px: 2, pb: 2 }}>
           {editable && (
             <Button
@@ -97,6 +101,16 @@ const MemoCard: FC<Props> = ({ item, currentUserUuid, onEditTags, onAssign }) =>
               onClick={() => onAssign(item)}
             >
               Assign
+            </Button>
+          )}
+          {deletable && (
+            <Button
+              size='small'
+              color='error'
+              startIcon={<DeleteOutlinedIcon />}
+              onClick={() => onDelete(item)}
+            >
+              Delete
             </Button>
           )}
         </CardActions>

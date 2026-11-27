@@ -12,6 +12,9 @@ export const isAuthor = (memo: Memo, userUuid: string | undefined): boolean =>
 export const canEditMemo = (role: Role, author: boolean): boolean =>
   author || role === 'ADMIN' || role === 'MOD';
 
+/** The memo's author and ADMINs can delete it. */
+export const canDeleteMemo = (role: Role, author: boolean): boolean => author || role === 'ADMIN';
+
 /** The roles a user may give others on a memo: ADMINs any, MODs only USER, USERs none. */
 export const assignableRoles = (role: Role): Role[] => {
   if (role === 'ADMIN') return ['USER', 'MOD', 'ADMIN'];
@@ -25,5 +28,5 @@ export const canAssign = (role: Role): boolean => assignableRoles(role).length >
 export const roleDescriptions: Record<Role, string> = {
   USER: 'Can read the memo',
   MOD: 'Can also edit the memo and assign users',
-  ADMIN: 'Can also assign MODs and ADMINs',
+  ADMIN: 'Can also delete the memo and assign MODs and ADMINs',
 };
