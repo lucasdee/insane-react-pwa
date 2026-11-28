@@ -86,7 +86,7 @@ Open DevTools → Application to inspect the registered service worker and cache
 - `src/api/` — API client, session handling and generated types
 - `src/auth/` — auth state (`AuthProvider`, `useAuth`) and route guards
 - `src/pages/` — home, login, register, profile, memo list, new memo and memo editor pages
-- `src/components/memos/` — memo card, tag input, user search, assignee list, and the edit tags, assign, delete and remove-assignee dialogs
+- `src/components/memos/` — memo card, tag input, user search, assignee list, and the assign, delete and remove-assignee dialogs
 - `src/hooks/useMemos.ts`, `src/hooks/useUserSearch.ts` — React Query hooks for memos, tags and users
 - `src/utils/permissions.ts` — what each role on a memo allows
 - `src/utils/validation.ts` — form and tag checks mirroring the API's rules

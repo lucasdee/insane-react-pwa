@@ -12,7 +12,6 @@ import {
 } from '@mui/material';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
 import PersonAddAlt1OutlinedIcon from '@mui/icons-material/PersonAddAlt1Outlined';
 import type { MemoListItem } from '../../api/types';
 import { canAssign, canDeleteMemo, canEditMemo, isAuthor } from '../../utils/permissions';
@@ -23,13 +22,12 @@ type Props = {
   item: MemoListItem;
   /** The signed-in user's uuid, to tell whether they wrote the memo. */
   currentUserUuid: string | undefined;
-  onEditTags: (item: MemoListItem) => void;
   onAssign: (item: MemoListItem) => void;
   onDelete: (item: MemoListItem) => void;
 };
 
 /** One memo, with who wrote it and the actions the user's role on it allows. */
-const MemoCard: FC<Props> = ({ item, currentUserUuid, onEditTags, onAssign, onDelete }) => {
+const MemoCard: FC<Props> = ({ item, currentUserUuid, onAssign, onDelete }) => {
   const { memo, role } = item;
   const titleId = `memo-title-${memo.uuid}`;
   const memoPath = `/memos/${encodeURIComponent(memo.uuid)}`;
@@ -83,15 +81,6 @@ const MemoCard: FC<Props> = ({ item, currentUserUuid, onEditTags, onAssign, onDe
               startIcon={<EditOutlinedIcon />}
             >
               Edit
-            </Button>
-          )}
-          {editable && (
-            <Button
-              size='small'
-              startIcon={<LocalOfferOutlinedIcon />}
-              onClick={() => onEditTags(item)}
-            >
-              Edit tags
             </Button>
           )}
           {showAssign && (

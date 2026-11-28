@@ -9,7 +9,6 @@ import {
   listMemos,
   listTags,
   removeAssignment,
-  replaceMemoTags,
   updateMemo,
 } from '../memos';
 import { server } from '../../test/server';
@@ -20,11 +19,7 @@ beforeEach(() => {
 });
 
 /** Captures the next request to `method path`, answering with `body`. */
-const capture = (
-  method: 'get' | 'post' | 'put' | 'patch',
-  path: string,
-  body: JsonBodyType = {},
-) => {
+const capture = (method: 'get' | 'post' | 'patch', path: string, body: JsonBodyType = {}) => {
   const seen: { url?: URL; body?: unknown } = {};
   server.use(
     http[method](api(path), async ({ request }) => {
@@ -139,23 +134,6 @@ describe('deleteMemo', () => {
 
     await expect(deleteMemo(memo.uuid)).rejects.toMatchObject({ status: 403 });
     expect(mockApi.memos).toHaveLength(1);
-  });
-});
-
-describe('replaceMemoTags', () => {
-  it('puts the tags to the memo, encoding its uuid', async () => {
-    const seen = capture('put', '/memos/:memoUuid/tags', { uuid: 'a/b' });
-
-    await replaceMemoTags('a/b', ['x']);
-
-    expect(seen.url?.pathname).toBe('/memos/a%2Fb/tags');
-    expect(seen.body).toEqual({ tags: ['x'] });
-  });
-
-  it('returns the updated memo', async () => {
-    const { memo } = seedMemo({ tags: ['old'] });
-
-    expect(await replaceMemoTags(memo.uuid, ['New', 'b'])).toMatchObject({ tags: ['b', 'new'] });
   });
 });
 

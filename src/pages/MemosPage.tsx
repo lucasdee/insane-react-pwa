@@ -13,7 +13,6 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import MemoCard from '../components/memos/MemoCard';
-import EditTagsDialog from '../components/memos/EditTagsDialog';
 import AssignMemoDialog from '../components/memos/AssignMemoDialog';
 import DeleteMemoDialog from '../components/memos/DeleteMemoDialog';
 import { useMemosQuery } from '../hooks/useMemos';
@@ -31,7 +30,6 @@ const MemosPage: FC = () => {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [editing, setEditing] = useState<MemoListItem | null>(null);
   const [assigning, setAssigning] = useState<MemoListItem | null>(null);
   const [deleting, setDeleting] = useState<MemoListItem | null>(null);
   const stateNotice = (location.state as MemosPageState | null)?.notice;
@@ -100,7 +98,6 @@ const MemosPage: FC = () => {
               key={item.memo.uuid}
               item={item}
               currentUserUuid={user?.uuid}
-              onEditTags={setEditing}
               onAssign={setAssigning}
               onDelete={setDeleting}
             />
@@ -108,14 +105,6 @@ const MemosPage: FC = () => {
         </Stack>
       )}
 
-      <EditTagsDialog
-        memo={editing?.memo ?? null}
-        onClose={() => setEditing(null)}
-        onSaved={() => {
-          setEditing(null);
-          setNotice('Tags saved');
-        }}
-      />
       <AssignMemoDialog
         item={assigning}
         onClose={() => setAssigning(null)}

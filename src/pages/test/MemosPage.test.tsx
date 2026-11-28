@@ -87,7 +87,6 @@ describe('MemosPage', () => {
     await screen.findByRole('article', { name: 'Mine' });
 
     expect(within(card('Mine')).getByRole('link', { name: 'Edit' })).toBeInTheDocument();
-    expect(within(card('Mine')).getByRole('button', { name: 'Edit tags' })).toBeInTheDocument();
     expect(within(card('Mine')).getByRole('button', { name: 'Assign' })).toBeInTheDocument();
     expect(within(card('Shared with me')).queryByRole('button')).not.toBeInTheDocument();
     expect(
@@ -115,39 +114,6 @@ describe('MemosPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Edit memo' })).toBeInTheDocument();
     expect(screen.getByTestId('location')).toHaveTextContent(`/memos/${entry.memo.uuid}`);
-  });
-
-  it('edits tags in a dialog and shows the saved tags', async () => {
-    seedMemo({ title: 'Groceries', tags: ['home'] });
-    const { user } = renderMemos();
-    await screen.findByRole('article', { name: 'Groceries' });
-
-    await user.click(within(card('Groceries')).getByRole('button', { name: 'Edit tags' }));
-    const dialog = screen.getByRole('dialog');
-    await user.type(within(dialog).getByRole('combobox', { name: 'Tags' }), 'food{Enter}');
-    await user.click(within(dialog).getByRole('button', { name: 'Save tags' }));
-
-    expect(await screen.findByText('Tags saved')).toBeInTheDocument();
-    await waitForNoDialog();
-    const tags = await within(card('Groceries')).findByRole('list', { name: 'Tags' });
-    await within(tags).findByText('food');
-    expect(
-      within(tags)
-        .getAllByRole('listitem')
-        .map((li) => li.textContent),
-    ).toEqual(['food', 'home']);
-  });
-
-  it('closes the tags dialog on Cancel without saving', async () => {
-    seedMemo({ title: 'Groceries', tags: ['home'] });
-    const { user } = renderMemos();
-    await screen.findByRole('article', { name: 'Groceries' });
-
-    await user.click(within(card('Groceries')).getByRole('button', { name: 'Edit tags' }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
-
-    await waitForNoDialog();
-    expect(mockApi.memos[0].memo.tags).toEqual(['home']);
   });
 
   it('assigns a memo in a dialog and confirms it', async () => {
