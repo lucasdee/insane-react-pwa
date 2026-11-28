@@ -16,7 +16,6 @@ import {
   useDeleteMemo,
   useMemoQuery,
   useMemosQuery,
-  useReplaceTags,
   useTagsQuery,
   useUpdateMemo,
 } from '../useMemos';
@@ -182,20 +181,6 @@ describe('mutations', () => {
     await act(() => result.current.mutateAsync(memo.uuid));
 
     expect(queryClient.getQueryState(assignmentsKey(memo.uuid))).toBeUndefined();
-  });
-
-  it('useReplaceTags replaces the tags and refetches memos and tags', async () => {
-    const { memo } = seedMemo({ tags: ['old'] });
-    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
-    const { result } = renderHook(() => useReplaceTags(), { wrapper });
-
-    const saved = await act(() =>
-      result.current.mutateAsync({ memoUuid: memo.uuid, tags: ['new'] }),
-    );
-
-    expect(saved.tags).toEqual(['new']);
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: memosKey });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: tagsKey });
   });
 
   it('useAssignMemo assigns and refetches only the memo’s assignees', async () => {

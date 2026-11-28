@@ -8,7 +8,6 @@ import {
   listMemos,
   listTags,
   removeAssignment,
-  replaceMemoTags,
   updateMemo,
 } from '../api/memos';
 import { ApiError, hasStatus } from '../api/errors';
@@ -94,15 +93,6 @@ export const useDeleteMemo = () => {
   return useMutation({
     mutationFn: deleteMemo,
     onSuccess: (_data, memoUuid) => forget(memoUuid),
-  });
-};
-
-export const useReplaceTags = () => {
-  const invalidate = useInvalidateMemos();
-  return useMutation({
-    mutationFn: ({ memoUuid, tags }: { memoUuid: string; tags: string[] }) =>
-      replaceMemoTags(memoUuid, tags),
-    onSuccess: invalidate,
   });
 };
 

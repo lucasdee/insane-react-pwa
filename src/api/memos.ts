@@ -37,10 +37,6 @@ export const updateMemo = (memoUuid: string, body: MemoUpdateRequest) =>
 export const deleteMemo = (memoUuid: string) =>
   authFetch<void>(memoPath(memoUuid), { method: 'DELETE' });
 
-/** Replaces all of a memo's tags. Only its author, MODs and ADMINs can do this. */
-export const replaceMemoTags = (memoUuid: string, tags: string[]) =>
-  authFetch<Memo>(`${memoPath(memoUuid)}/tags`, { method: 'PUT', body: { tags } });
-
 /** Assigns a memo to another user. MODs can assign USER; ADMINs any role. */
 export const assignMemo = (body: MemoOnUserCreateRequest) =>
   authFetch<MemoOnUser>('/memos/assign', { method: 'POST', body });

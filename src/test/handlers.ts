@@ -8,7 +8,6 @@ import type {
   MemoCreateRequest,
   MemoOnUser,
   MemoOnUserCreateRequest,
-  MemoTagsUpdateRequest,
   MemoUpdateRequest,
   RegisterRequest,
   Role,
@@ -295,18 +294,6 @@ export const handlers = [
     }
     mockApi.memos = mockApi.memos.filter((other) => other !== entry);
     return new HttpResponse(null, { status: 204 });
-  }),
-
-  http.put(api('/memos/:memoUuid/tags'), async ({ request, params }) => {
-    if (!isAuthorized(request)) return unauthorized();
-    const entry = findMemo(params.memoUuid);
-    if (!entry) return forbidden(NO_ACCESS);
-    if (!canEdit(entry)) {
-      return forbidden("Only the memo's author, ADMINs and MODs can change its tags");
-    }
-    const { tags } = (await request.json()) as MemoTagsUpdateRequest;
-    entry.memo = { ...entry.memo, tags: storedTags(tags) };
-    return HttpResponse.json(entry.memo);
   }),
 
   http.post(api('/memos/assign'), async ({ request }) => {

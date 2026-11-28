@@ -24,7 +24,6 @@ const item = (role: Role, tags = ['home', 'work']): MemoListItem => ({
 });
 
 const renderCard = (memo: MemoListItem, currentUserUuid = 'u-1') => {
-  const onEditTags = vi.fn();
   const onAssign = vi.fn();
   const onDelete = vi.fn();
   render(
@@ -32,14 +31,12 @@ const renderCard = (memo: MemoListItem, currentUserUuid = 'u-1') => {
       <MemoCard
         item={memo}
         currentUserUuid={currentUserUuid}
-        onEditTags={onEditTags}
         onAssign={onAssign}
         onDelete={onDelete}
       />
     </MemoryRouter>,
   );
   return {
-    onEditTags,
     onAssign,
     onDelete,
     card: screen.getByRole('article', { name: 'Groceries' }),
@@ -98,16 +95,21 @@ describe('MemoCard', () => {
     ['USER', true, true, false, true],
     ['MOD', true, true, true, true],
   ])(
-    'a memo %s (author: %s) sees Edit and Edit tags: %s, Assign: %s, Delete: %s',
+    'a memo %s (author: %s) sees Edit: %s, Assign: %s, Delete: %s',
     (role, author, edit, assign, remove) => {
       const { card } = renderCard(item(role), author ? 'u-1' : 'u-2');
 
       expect(!!within(card).queryByRole('link', { name: 'Edit' })).toBe(edit);
-      expect(!!within(card).queryByRole('button', { name: 'Edit tags' })).toBe(edit);
       expect(!!within(card).queryByRole('button', { name: 'Assign' })).toBe(assign);
       expect(!!within(card).queryByRole('button', { name: 'Delete' })).toBe(remove);
     },
   );
+
+  it('has no separate tags action, as tags are edited in the memo editor', () => {
+    const { card } = renderCard(item('ADMIN'));
+
+    expect(within(card).queryByRole('button', { name: 'Edit tags' })).not.toBeInTheDocument();
+  });
 
   it('links Edit to the memo', () => {
     const { card } = renderCard(item('MOD'), 'u-2');
@@ -118,13 +120,11 @@ describe('MemoCard', () => {
   it('calls back with the memo from its actions', async () => {
     const user = userEvent.setup();
     const memo = item('ADMIN');
-    const { card, onEditTags, onAssign, onDelete } = renderCard(memo);
+    const { card, onAssign, onDelete } = renderCard(memo);
 
-    await user.click(within(card).getByRole('button', { name: 'Edit tags' }));
     await user.click(within(card).getByRole('button', { name: 'Assign' }));
     await user.click(within(card).getByRole('button', { name: 'Delete' }));
 
-    expect(onEditTags).toHaveBeenCalledWith(memo);
     expect(onAssign).toHaveBeenCalledWith(memo);
     expect(onDelete).toHaveBeenCalledWith(memo);
   });
