@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { act } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { AppRoutes } from '../../App';
@@ -207,5 +208,42 @@ describe('MemosPage', () => {
 
     await waitFor(() => expect(screen.queryByText('Created “Plan”')).not.toBeInTheDocument());
     expect(screen.getByTestId('location')).toHaveTextContent('/memos');
+  });
+
+  describe('message timing', () => {
+    beforeEach(() => {
+      // Real time still advances the fake clock, so requests and user-event work as usual.
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    const advance = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
+
+    it('gives a message that replaces a showing one its own full time', async () => {
+      seedMemo({ title: 'Plan' });
+      const { user } = renderMemos({
+        route: { pathname: '/memos', state: { notice: 'Created “Plan”' } },
+      });
+      await screen.findByRole('article', { name: 'Plan' });
+      await advance(3000);
+
+      await user.click(within(card('Plan')).getByRole('button', { name: 'Assign' }));
+      const dialog = screen.getByRole('dialog');
+      await user.type(within(dialog).getByRole('combobox', { name: 'User' }), 'bob');
+      await user.click(await screen.findByRole('option', { name: 'Bob Builder (@bob)' }));
+      await user.click(within(dialog).getByRole('button', { name: 'Assign' }));
+      const assigned = 'Assigned to Bob Builder (@bob) as USER';
+      expect(await screen.findByText(assigned)).toBeInTheDocument();
+
+      // Past the first message's 4 s, but within the new message's own 4 s.
+      await advance(2000);
+      expect(screen.getByText(assigned)).toBeInTheDocument();
+
+      await advance(2500);
+      await waitFor(() => expect(screen.queryByText(assigned)).not.toBeInTheDocument());
+    });
   });
 });
