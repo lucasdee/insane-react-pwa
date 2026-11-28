@@ -34,6 +34,13 @@ const MemosPage: FC = () => {
   const [deleting, setDeleting] = useState<MemoListItem | null>(null);
   const stateNotice = (location.state as MemosPageState | null)?.notice;
   const [notice, setNotice] = useState<string | null>(stateNotice ?? null);
+  // Counts the messages shown. Keying the Snackbar by it gives each new message, even
+  // one replacing a showing message or repeating it, its own full auto-hide time.
+  const [noticeId, setNoticeId] = useState(0);
+  const showNotice = (message: string) => {
+    setNotice(message);
+    setNoticeId((id) => id + 1);
+  };
 
   // Take over a message passed in and drop it from the history entry right away, so it
   // doesn't come back on reload or Back. Done here, not when the message closes: a
@@ -110,7 +117,7 @@ const MemosPage: FC = () => {
         onClose={() => setAssigning(null)}
         onAssigned={(user, role) => {
           setAssigning(null);
-          setNotice(`Assigned to ${userLabel(user)} as ${role}`);
+          showNotice(`Assigned to ${userLabel(user)} as ${role}`);
         }}
       />
       <DeleteMemoDialog
@@ -118,10 +125,11 @@ const MemosPage: FC = () => {
         onClose={() => setDeleting(null)}
         onDeleted={(memo) => {
           setDeleting(null);
-          setNotice(`Deleted “${memo.title}”`);
+          showNotice(`Deleted “${memo.title}”`);
         }}
       />
       <Snackbar
+        key={noticeId}
         open={notice !== null}
         message={notice}
         autoHideDuration={4000}
